@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="DikePay/DikePay.csproj">
+    <Deploy />
+  </Project>
+</Solution>

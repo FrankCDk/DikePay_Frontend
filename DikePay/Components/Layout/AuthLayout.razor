@@ -1,0 +1,52 @@
+﻿@using Microsoft.Maui.Devices
+@inherits LayoutComponentBase
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<style>
+    /* 1. Reset global para asegurar que no haya scrolls fantasmas */
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    /* 2. Ajuste del contenedor de MudBlazor */
+    .mud-main-content {
+        padding-top: 0 !important;
+    }
+
+    .auth-background {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        height: 100vh;
+        width: 100vw;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /* Forzamos que empiece desde la esquina superior izquierda */
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 0;
+    }
+</style>
+
+<MudLayout>
+    <MudMainContent>
+        @* Solo renderizamos la Safe Area si NO es Windows ni Mac *@
+        @if (DeviceInfo.Current.Platform != DevicePlatform.WinUI && 
+             DeviceInfo.Current.Platform != DevicePlatform.MacCatalyst)
+        {
+            <div class="status-bar-safe-area"></div>
+        }
+
+        <div class="auth-background">
+            @Body
+        </div>
+    </MudMainContent>
+</MudLayout>

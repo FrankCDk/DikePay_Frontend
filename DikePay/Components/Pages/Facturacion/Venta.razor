@@ -1,0 +1,280 @@
+﻿@page "/facturacion/ventas"
+@using DikePay.Helpers
+@using DikePay.Models.Facturacion
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject BarcodeScannerService ScannerService
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-2 mt-md-4">
+    <MudText Typo="Typo.h5" Class="mb-4" Color="Color.Primary"><b>DikePay</b> - Nueva Venta</MudText>
+
+    <MudGrid Spacing="2">
+        <MudItem xs="12" md="4">
+            <MudStack Spacing="3">
+                <MudPaper Class="pa-4" Elevation="2">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2"><b>Comprobante</b></MudText>
+                    <MudGrid Spacing="1">
+                        <MudItem xs="6">
+                            <MudSelect T="string" Label="Tipo" @bind-Value="_tipoDoc" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                <MudSelectItem Value="@("Boleta")" />
+                                <MudSelectItem Value="@("Factura")" />
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudSelect T="string" Label="Moneda" @bind-Value="_moneda" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                <MudSelectItem Value="@("PEN")">Soles</MudSelectItem>
+                                <MudSelectItem Value="@("USD")">Dólares</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudAutocomplete T="string" Label="Cliente" @bind-Value="_clienteNombre" SearchFunc="@SearchClientes"
+                                             Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" />
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+
+                <MudPaper Class="pa-4" Elevation="2">
+                    <div class="d-flex align-center justify-space-between mb-2">
+                        <MudText Typo="Typo.subtitle2"><b>Artículos</b></MudText>
+
+                        @* BOTÓN DE CÁMARA: Solo visible en móviles reales *@
+                        @if (IsMobile)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.CameraAlt"
+                                           Color="Color.Primary"
+                                           Variant="Variant.Filled"
+                                           Size="Size.Medium"
+                                           OnClick="AbrirEscanner" />
+                        }
+                    </div>
+
+                    <MudAutocomplete T="Articulo" Label="Nombre o SKU" @bind-Value="_productoSeleccionado"
+                                     SearchFunc="@SearchProductos" ToStringFunc="@(p => p?.Nombre)"
+                                     Variant="Variant.Outlined" Margin="Margin.Dense" />
+
+                    <div class="d-flex align-center mt-3">
+                        <MudNumericField @bind-Value="_cantidadAgregar" Label="Cant." Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mr-2" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AgregarAlCarrito" FullWidth="true" Style="height: 40px;">
+                            Agregar
+                        </MudButton>
+                    </div>
+                </MudPaper>
+            </MudStack>
+        </MudItem>
+
+        <MudItem xs="12" md="8">
+            <MudTable Items="@_carrito" Hover="true" Elevation="2" Dense="true" FixedHeader="true" Height="350px">
+                <HeaderContent>
+                    <MudTh>Producto</MudTh>
+                    <MudTh Style="text-align:right">Subtotal</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudText Typo="Typo.body2"><b>@context.Producto.Nombre</b></MudText>
+                        <MudText Typo="Typo.caption">@context.Cantidad x @_simboloMoneda @context.PrecioUnitario</MudText>
+                    </MudTd>
+                    <MudTd Style="text-align:right">@_simboloMoneda @context.Subtotal.ToString("N2")</MudTd>
+                    <MudTd Style="text-align:right">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => EliminarItem(context))" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+
+            <MudPaper Class="pa-4 mt-3 d-flex justify-space-between align-center" Elevation="4" Style="background-color: #333; color: white;">
+                <div>
+                    <MudText Typo="Typo.caption" Style="color: #bbb;">TOTAL</MudText>
+                    <MudText Typo="Typo.h5"><b>@_simboloMoneda @_totalVenta.ToString("N2")</b></MudText>
+                </div>
+                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Large"
+                           Disabled="@(!_carrito.Any())" OnClick="ProcesarPago">
+                    PAGAR
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    // Datos de Cabecera
+    private string _tipoDoc = "Boleta";
+    private string _moneda = "PEN";
+    private string _vendedor = "Juan Programador"; // Simular usuario logueado
+    private string _clienteNombre = "Público General";
+    private string _simboloMoneda => _moneda == "PEN" ? "S/" : "$";
+    private bool IsMobile => DeviceInfo.Current.Platform == DevicePlatform.Android || DeviceInfo.Current.Platform == DevicePlatform.iOS;
+
+    // Datos de Productos (Tienda de Abarrotes)
+    private List<Articulo> _productosDisponibles = new()
+    {
+        new Articulo { Id = 1, Nombre = "Arroz Costeño 1kg", Precio = 4.50m, CodigoSku = "ARR-001", Stock = 100 },
+        new Articulo { Id = 2, Nombre = "Aceite Primor 1L", Precio = 11.20m, CodigoSku = "ACE-002", Stock = 50 },
+        new Articulo { Id = 3, Nombre = "Leche Gloria Azul 400g", Precio = 3.80m, CodigoSku = "LEC-003", Stock = 120 },
+        new Articulo { Id = 4, Nombre = "Fideos Don Vittorio 500g", Precio = 3.20m, CodigoSku = "FID-004", Stock = 80 },
+        new Articulo { Id = 5, Nombre = "Detergente Bolívar 1kg", Precio = 9.50m, CodigoSku = "DET-005", Stock = 40 }
+    };
+
+    private List<string> _clientesFrecuentes = new() { "Público General", "Empresa ABC SAC", "Juan Pérez", "María García" };
+
+    private List<DetalleVenta> _carrito = new();
+    private Articulo? _productoSeleccionado;
+    private int _cantidadAgregar = 1;
+    private decimal _totalVenta => _carrito.Sum(x => x.Subtotal);
+
+    private async Task<IEnumerable<string>> SearchClientes(string value, CancellationToken token)
+    {
+        if (string.IsNullOrEmpty(value)) return _clientesFrecuentes;
+        return _clientesFrecuentes.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+
+    private async Task<IEnumerable<Articulo>> SearchProductos(string value, CancellationToken token)
+    {
+        if (string.IsNullOrEmpty(value)) return _productosDisponibles;
+        return _productosDisponibles.Where(x => x.Nombre.Contains(value, StringComparison.InvariantCultureIgnoreCase) || 
+                                               x.CodigoSku.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+    }
+
+    private void AgregarAlCarrito()
+    {
+        if (_productoSeleccionado == null) return;
+
+        var itemExistente = _carrito.FirstOrDefault(x => x.Producto.Id == _productoSeleccionado.Id);
+
+        if (itemExistente != null)
+        {
+            itemExistente.Cantidad += _cantidadAgregar;
+        }
+        else
+        {
+            // Usamos el constructor que "congela" el precio
+            _carrito.Add(new DetalleVenta(_productoSeleccionado, _cantidadAgregar));
+        }
+
+        _productoSeleccionado = null;
+        _cantidadAgregar = 1;
+    }
+
+    private void EliminarItem(DetalleVenta item) => _carrito.Remove(item);
+
+    // private async Task AbrirEscanner()
+    // {
+    //     try
+    //     {
+    //         // 1. Validar y solicitar permiso de cámara ANTES de abrir el diálogo
+    //         var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
+
+    //         if (status != PermissionStatus.Granted)
+    //         {
+    //             status = await Permissions.RequestAsync<Permissions.Camera>();
+    //         }
+
+    //         if (status != PermissionStatus.Granted)
+    //         {
+    //             Snackbar.Add("Se requiere permiso de cámara para escanear.", Severity.Error);
+    //             return;
+    //         }
+
+    //         // 2. Si hay permiso, abrimos el diálogo
+    //         var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, BackdropClick = false };
+    //         var dialog = await DialogService.ShowAsync<DikePay.Components.Shared.ScannerWebDialog>("Escanear Producto", options);
+    //         var result = await dialog.Result;
+
+    //         if (result != null && !result.Canceled && result.Data != null)
+    //         {
+    //             string skuLeido = result.Data.ToString() ?? "";
+    //             BuscarYAgregarPorSku(skuLeido);
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Snackbar.Add("Error al abrir cámara: " + ex.Message, Severity.Error);
+    //     }
+    // }
+
+    private async Task AbrirEscanner()
+    {
+        var status = await Permissions.RequestAsync<Permissions.Camera>();
+        if (status != PermissionStatus.Granted)
+        {
+            Snackbar.Add("Permiso de cámara denegado", Severity.Error);
+            return;
+        }
+
+        var sku = await ScannerService.ScanAsync();
+        if (!string.IsNullOrEmpty(sku))
+        {
+            BuscarYAgregarPorSku(sku);
+        }
+    }
+
+
+    private void BuscarYAgregarPorSku(string sku)
+    {
+        var prod = _productosDisponibles.FirstOrDefault(x => x.CodigoSku == sku);
+        if (prod != null)
+        {
+            _productoSeleccionado = prod;
+            AgregarAlCarrito();
+            Snackbar.Add($"Escaneado: {prod.Nombre}", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add($"Código {sku} no reconocido", Severity.Warning);
+        }
+    }
+
+    private async Task ProcesarPago()
+    {
+        var parametersPago = new DialogParameters<PagoDialog> { 
+            { x => x.TotalVenta, _totalVenta } 
+        };
+    
+        var options = new DialogOptions { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true,
+            BackdropClick = false // CORREGIDO: Es BackdropClick = false
+        };
+
+        var dialogPago = await DialogService.ShowAsync<PagoDialog>("Finalizar Venta", parametersPago, options);
+        var resultPago = await dialogPago.Result;
+
+        if (!resultPago.Canceled && resultPago.Data != null)
+        {
+            dynamic datos = resultPago.Data;
+
+            // CORREGIDO: Accedemos correctamente a Producto.Nombre y Producto.Precio
+            var productosParaTicket = _carrito.Select(item => new {
+                Nombre = item.Producto.Nombre, 
+                Precio = item.PrecioUnitario,
+                Cantidad = item.Cantidad
+            }).Cast<dynamic>().ToList();
+
+            // Llamamos al ticket pasando la lista ya formateada
+            await MostrarTicketExitoso(datos, productosParaTicket);
+        
+            _carrito.Clear();
+            // CORREGIDO: Eliminamos '_totalVenta = 0' porque se calcula solo
+        
+            Snackbar.Add("Venta registrada con éxito", Severity.Success);
+            StateHasChanged();
+        }
+    }
+
+    // CORREGIDO: Ahora el método acepta la lista de productos preparada
+    private async Task MostrarTicketExitoso(dynamic datos, List<dynamic> productos)
+    {
+        var parametersExito = new DialogParameters<VentaExitosaDialog>
+        {
+            { x => x.TotalPagado, (decimal)datos.TotalPagado },
+            { x => x.Descuento, (decimal)datos.Descuento },
+            { x => x.MetodoPago, (string)datos.Metodo },
+            { x => x.ProductosVendidos, productos }, 
+            { x => x.SerieNumero, $"B001-{DateTime.Now:mmssff}" } 
+        };
+
+        var options = new DialogOptions { CloseButton = false, MaxWidth = MaxWidth.Small, FullWidth = true };
+        await DialogService.ShowAsync<VentaExitosaDialog>("Comprobante", parametersExito, options);
+    }
+
+}

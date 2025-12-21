@@ -1,0 +1,134 @@
+﻿@page "/facturacion/articulos"
+@using DikePay.Models.Facturacion
+@using MudBlazor
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+        <MudText Typo="Typo.h4" Style="font-weight: bold;">Maestro de Artículos</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="CrearNuevoArticulo">
+            Nuevo Artículo
+        </MudButton>
+    </MudStack>
+
+    <MudTable T="Articulo" Items="@_articulos" Hover="true" Bordered="true" Striped="true" Elevation="1">
+        <HeaderContent>
+            <MudTh>ID</MudTh>
+            <MudTh>Nombre</MudTh>
+            <MudTh>Precio</MudTh>
+            <MudTh>SKU</MudTh>
+            <MudTh>Stock</MudTh>
+            <MudTh Style="text-align: right;">Acciones</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="ID">@context.Id</MudTd>
+            <MudTd DataLabel="Nombre">@context.Nombre</MudTd>
+            <MudTd DataLabel="Precio">@context.Precio.ToString("C2")</MudTd>
+            <MudTd DataLabel="SKU">@context.CodigoSku</MudTd>
+            <MudTd DataLabel="Stock">@context.Stock</MudTd>
+            <MudTd Style="text-align: right;">
+                <MudIconButton Icon="@Icons.Material.Outlined.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditarArticulo(context))" />
+                <MudIconButton Icon="@Icons.Material.Outlined.QrCode" Color="Color.Info" Size="Size.Small" OnClick="@(() => MostrarBarcode(context))" Disabled="@(string.IsNullOrEmpty(context.CodigoSku))" />
+                <MudIconButton Icon="@Icons.Material.Outlined.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => EliminarArticulo(context))" />
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[] { 10, 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private List<Articulo> _articulos = new List<Articulo>();
+    private int _nextId = 1;
+
+    protected override void OnInitialized()
+{
+    // Datos de prueba basados en tu lista de productos disponibles
+    _articulos.Add(new Articulo { Id = _nextId++, Nombre = "Arroz Costeño 1kg", Precio = 4.50m, CodigoSku = "ARR-001", Stock = 100 });
+    _articulos.Add(new Articulo { Id = _nextId++, Nombre = "Aceite Primor 1L", Precio = 11.20m, CodigoSku = "ACE-002", Stock = 50 });
+    _articulos.Add(new Articulo { Id = _nextId++, Nombre = "Leche Gloria Azul 400g", Precio = 3.80m, CodigoSku = "LEC-003", Stock = 120 });
+    _articulos.Add(new Articulo { Id = _nextId++, Nombre = "Fideos Don Vittorio 500g", Precio = 3.20m, CodigoSku = "FID-004", Stock = 80 });
+    
+    // Dejamos el último sin SKU para que sigas probando tu lógica de botón deshabilitado
+    _articulos.Add(new Articulo { Id = _nextId++, Nombre = "Detergente Bolívar 1kg", Precio = 9.50m, CodigoSku = "", Stock = 40 }); 
+}
+
+    private async Task CrearNuevoArticulo()
+    {
+        var nuevoArticulo = new Articulo { Id = _nextId++, Stock = 0, Precio = 0m, Nombre = string.Empty, CodigoSku = string.Empty };
+        var parameters = new DialogParameters { ["Articulo"] = nuevoArticulo };
+
+        var dialog = await DialogService.ShowAsync<DikePay.Components.Shared.ArticuloFormDialog>("Nuevo Artículo", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is Articulo articuloGuardado)
+        {
+            _articulos.Add(articuloGuardado);
+            Snackbar.Add("Artículo creado con éxito!", Severity.Success);
+            StateHasChanged();
+        }
+        else
+        {
+            // Si el usuario cancela, revertimos el Id generado
+            _nextId--;
+        }
+    }
+
+    private async Task EditarArticulo(Articulo articulo)
+    {
+        // Clonamos el artículo para no modificar el original hasta que se guarde
+        var articuloParaEditar = new Articulo
+        {
+            Id = articulo.Id,
+            Nombre = articulo.Nombre,
+            Precio = articulo.Precio,
+            CodigoSku = articulo.CodigoSku,
+            Stock = articulo.Stock
+        };
+
+        var parameters = new DialogParameters { ["Articulo"] = articuloParaEditar };
+        var dialog = await DialogService.ShowAsync<DikePay.Components.Shared.BarcodeDisplayDialog>("Editar Artículo", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is Articulo articuloActualizado)
+        {
+            // Encontrar el índice y reemplazar el artículo original
+            var index = _articulos.FindIndex(a => a.Id == articuloActualizado.Id);
+            if (index != -1)
+            {
+                _articulos[index] = articuloActualizado;
+                Snackbar.Add("Artículo actualizado con éxito!", Severity.Success);
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task EliminarArticulo(Articulo articulo)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Eliminar Artículo",
+            $"¿Estás seguro de que deseas eliminar el artículo '{articulo.Nombre}' (SKU: {articulo.CodigoSku})?",
+            yesText: "Sí", cancelText: "No");
+
+        if (result == true)
+        {
+            _articulos.Remove(articulo);
+            Snackbar.Add("Artículo eliminado.", Severity.Info);
+            StateHasChanged();
+        }
+    }
+
+    private async Task MostrarBarcode(Articulo articulo)
+    {
+        if (string.IsNullOrEmpty(articulo.CodigoSku))
+        {
+            Snackbar.Add("Este artículo no tiene un Código SKU asignado.", Severity.Warning);
+            return;
+        }
+
+        var parameters = new DialogParameters { ["CodigoSku"] = articulo.CodigoSku };
+        await DialogService.ShowAsync<BarcodeDisplayDialog>($"Código de Barras: {articulo.Nombre}", parameters);
+    }
+}

@@ -1,0 +1,171 @@
+﻿@inherits LayoutComponentBase
+@using Microsoft.Maui.Devices
+
+<MudThemeProvider Theme="_dikePayTheme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<style>
+    :root {
+        --safe-area-top: var(--maui-safe-area-inset-top, 32px);
+    }
+
+    /* Estos estilos SOLO afectarán si el contenedor tiene la clase 'is-mobile' */
+    .is-mobile .status-bar-safe-area {
+        height: var(--safe-area-top);
+        background-color: #594AE2;
+        width: 100%;
+        position: fixed;
+        top: 0;
+        z-index: 1400;
+        display: block;
+    }
+
+    .is-mobile .mud-appbar-fixed-top {
+        top: var(--safe-area-top) !important;
+    }
+
+    .is-mobile .mud-main-content {
+        padding-top: calc(var(--mud-appbar-height) + var(--safe-area-top) + 8px) !important;
+    }
+
+    .is-mobile .mud-drawer {
+        margin-top: var(--safe-area-top) !important;
+        height: calc(100% - var(--safe-area-top)) !important;
+    }
+</style>
+
+<MudLayout Class="@_layoutClass">
+
+    @if (_isMobile)
+    {
+        <div class="status-bar-safe-area"></div>
+    }
+
+    @* Barra Superior *@
+    <MudAppBar Elevation="1" Color="Color.Primary">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        <MudText Typo="Typo.h6" Class="ml-3">DikePay</MudText>
+        <MudSpacer />
+
+        @* Notificaciones *@
+        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" ActivationEvent="MouseEvent.LeftClick" PopoverClass="mud-popover-cascading"  >
+            <ActivatorContent>
+                <MudBadge Content="5" Color="Color.Error" Overlap="true" Class="mx-3">
+                    <MudIconButton Icon="@Icons.Material.Outlined.Notifications" Color="Color.Inherit" />
+                </MudBadge>
+            </ActivatorContent>
+            <ChildContent>
+                <MudCard Elevation="0" Style="width: 350px; max-height: 450px; overflow-y: auto;">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Notificaciones</MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small">Marcar todo como leído</MudButton>
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudDivider />
+                    <MudList T="string" Clickable="true">
+                        <MudListItem Icon="@Icons.Material.Outlined.CheckCircle" IconColor="Color.Success">
+                            <div class="d-flex flex-column">
+                                <MudText Typo="Typo.body2"><b>Venta exitosa</b></MudText>
+                                <MudText Typo="Typo.caption">Factura #F001 generada correctamente.</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Hace 5 min</MudText>
+                            </div>
+                        </MudListItem>
+                        <MudDivider />
+                        <MudListItem Icon="@Icons.Material.Outlined.Warning" IconColor="Color.Warning">
+                            <div class="d-flex flex-column">
+                                <MudText Typo="Typo.body2"><b>Stock Bajo</b></MudText>
+                                <MudText Typo="Typo.caption">El artículo "Laptop Pro" tiene menos de 3 unidades.</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Hace 2 horas</MudText>
+                            </div>
+                        </MudListItem>
+                        <MudDivider />
+                        <MudListItem Icon="@Icons.Material.Outlined.ErrorOutline" IconColor="Color.Error">
+                            <div class="d-flex flex-column">
+                                <MudText Typo="Typo.body2"><b>Error de SUNAT</b></MudText>
+                                <MudText Typo="Typo.caption">El documento #F002 fue rechazado por el servidor.</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Hace 1 día</MudText>
+                            </div>
+                        </MudListItem>
+                        <MudDivider />
+                        <MudListItem Icon="@Icons.Material.Outlined.PersonAdd" IconColor="Color.Info">
+                            <div class="d-flex flex-column">
+                                <MudText Typo="Typo.body2"><b>Nuevo Usuario</b></MudText>
+                                <MudText Typo="Typo.caption">Se ha registrado el vendedor: Maria Perez.</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Hace 2 días</MudText>
+                            </div>
+                        </MudListItem>
+                    </MudList>
+                    <MudDivider />
+                    <div class="pa-2 d-flex justify-center">
+                        <MudButton Variant="Variant.Text" FullWidth="true" Color="Color.Primary">Ver todas las notificaciones</MudButton>
+                    </div>
+                </MudCard>
+            </ChildContent>
+        </MudMenu>
+
+        @* Menú de Usuario *@
+        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" ActivationEvent="MouseEvent.LeftClick" PopoverClass="mud-popover-cascading">
+            <ActivatorContent>
+                <MudAvatar Color="Color.Secondary">JD</MudAvatar>
+            </ActivatorContent>
+            <ChildContent>
+                <MudMenuItem Icon="@Icons.Material.Outlined.Person">Mi Perfil</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Outlined.Security">Seguridad</MudMenuItem>
+                <MudDivider />
+                <MudMenuItem Icon="@Icons.Material.Outlined.Logout" Color="Color.Error">Cerrar Sesión</MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+    </MudAppBar>
+
+    @* Menú Lateral (Drawer) *@
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2" Variant="@DrawerVariant.Responsive">
+        <NavMenu />
+    </MudDrawer>
+
+    @* Contenido Principal *@
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-6">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    bool _drawerOpen = true;
+    private bool _isMobile;
+    private string _layoutClass = "";
+
+    protected override void OnInitialized()
+    {
+        // Detectamos si es móvil una sola vez al iniciar
+        _isMobile = DeviceInfo.Current.Platform != DevicePlatform.WinUI &&
+                    DeviceInfo.Current.Platform != DevicePlatform.MacCatalyst;
+
+        // Si es móvil, aplicamos la clase que activa el CSS especial
+        _layoutClass = _isMobile ? "is-mobile" : "";
+    }
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private MudTheme _dikePayTheme = new MudTheme()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#594AE2",          // Un morado/azul más moderno
+            Secondary = "#00C853",        // Verde para temas de éxito/pagos
+            AppbarBackground = "#594AE2",
+        },
+        LayoutProperties = new LayoutProperties()
+        {
+            DefaultBorderRadius = "8px", // Bordes más suaves en toda la app
+        }
+    };
+}

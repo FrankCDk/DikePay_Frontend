@@ -1,0 +1,196 @@
+﻿@page "/facturacion/consola-documentos"
+@using DikePay.Models.Facturacion;
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4">Consola de Documentos</MudText>
+
+    <MudGrid>
+
+        <MudItem xs="12" sm="6" md="4" lg="3">
+            <MudSelect T="string" Label="Tipo de Documento" Variant="Variant.Outlined" FullWidth="true" Margin="Margin.Dense">
+                <MudSelectItem Value="@("Factura")" />
+                <MudSelectItem Value="@("Boleta")" />
+                <MudSelectItem Value="@("Nota de Crédito")" />
+                <MudSelectItem Value="@("Nota de Débito")" />
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="4" lg="3">
+            <MudSelect T="string" Label="Agencia" Variant="Variant.Outlined" FullWidth="true" Margin="Margin.Dense">
+                <MudSelectItem Value="@("0001 - Agencia Principal")" />
+                <MudSelectItem Value="@("0002 - Agencia Reserva")" />
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="4" lg="3">
+            <MudTextField ShrinkLabel @bind-Value="Serie" Label="Serie" Variant="Variant.Outlined" Margin="Margin.Dense"></MudTextField>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="4" lg="3">
+            <MudTextField ShrinkLabel @bind-Value="Numero" Label="Numero" Variant="Variant.Outlined" Margin="Margin.Dense"></MudTextField>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="4" lg="3">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Search">Buscar</MudButton>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudTable @ref="_table" T="Documento" Items="@Documentos" MultiSelection="true" SelectionChangeable="_selectionChangeable"
+                      Hover="true" OnRowClick="@OnRowClick" SelectOnRowClick="@_selectOnRowClick" Bordered="true">
+                <HeaderContent>
+                    <MudTh>AGENCIA</MudTh>
+                    <MudTh>TIPO</MudTh>
+                    <MudTh>DOCUMENTO</MudTh>
+                    <MudTh>CLIENTE</MudTh>
+                    <MudTh>MONTO</MudTh>
+                    <MudTh>ESTADO</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    @* IMPORTANTE: Usamos las propiedades reales de tu clase Documento *@
+                    <MudTd DataLabel="Agencia">@context.Agencia</MudTd>
+                    <MudTd DataLabel="Tipo">@context.Tipo</MudTd>
+                    <MudTd DataLabel="Documento">@($"{context.Serie}-{context.Numero}")</MudTd>
+                    <MudTd DataLabel="Cliente">@context.NombreCliente</MudTd>
+                    <MudTd DataLabel="Monto">@context.Importe.ToString("C2")</MudTd>
+                    @* <MudTd DataLabel="Estado">@context.Estado</MudTd> *@
+                    <MudTd DataLabel="Estado">
+                        <MudChip T="string"
+                                 Variant="Variant.Text"
+                                 Color="@GetColorEstado(context.Estado)"
+                                 Size="Size.Small"
+                                 Icon="@GetIconEstado(context.Estado)">
+                            @context.Estado
+                        </MudChip>
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] { 10, 25, 50 }" />
+                </PagerContent>
+                <FooterContent>
+                    <MudTd colspan="5">Select All</MudTd>
+                </FooterContent>
+            </MudTable>
+        </MudItem>
+
+    </MudGrid>
+
+    
+
+
+</MudContainer>
+
+@code {
+
+    public string Numero { get; set; } = string.Empty;
+    public string Serie { get; set; } = string.Empty;
+
+    private HashSet<Documento> selectedItems = new HashSet<Documento>();
+    private IEnumerable<Documento> Documentos = new List<Documento>();
+    private bool _selectOnRowClick = true;
+    private bool _selectionChangeable = true;
+    private MudTable<Documento> _table;
+    private string _selectedItemText = "No row clicked";
+
+    protected override void OnInitialized()
+    {
+        // Tu lista de datos Hardcoded está muy bien para pruebas
+        CargarDatosPrueba();
+    }
+
+    private void CargarDatosPrueba()
+    {
+        //Elements = await httpClient.GetFromJsonAsync<List<Element>>("webapi/periodictable");
+        Documentos = new List<Documento>
+        {
+            new Documento
+            {
+                Agencia = "001",
+                Tipo = "FT",
+                Serie = "F001",
+                Numero = "00012345",
+                CodigoCliente = "20231234554",
+                NombreCliente = "Empresa Alpha SAC",
+                Moneda = "PEN",
+                Importe = 1500.50m,
+                Estado = "V",
+                EstadoDocumento = "ENVPD",
+                EstadoSunat = "CDRA"
+            },
+            new Documento
+            {
+                Agencia = "001",
+                Tipo = "FT",
+                Serie = "F001",
+                Numero = "0000333",
+                CodigoCliente = "20231234554",
+                NombreCliente = "Empresa Alpha SAC",
+                Moneda = "MN",
+                Importe = 250.50m,
+                Estado = "V",
+                EstadoDocumento = "ENVPD",
+                EstadoSunat = "CDRA"
+            },
+            new Documento
+            {
+                Agencia = "001",
+                Tipo = "BV",
+                Serie = "B001",
+                Numero = "00012377",
+                CodigoCliente = "20231234554",
+                NombreCliente = "Empresa Alpha SAC",
+                Moneda = "PEN",
+                Importe = 15.50m,
+                Estado = "V",
+                EstadoDocumento = "ENVPD",
+                EstadoSunat = "CDRA"
+            },
+            new Documento
+            {
+                Agencia = "002",
+                Tipo = "FT",
+                Serie = "F002",
+                Numero = "00098766",
+                CodigoCliente = "C0004",
+                NombreCliente = "Comercial Beta SAC",
+                Moneda = "PEN",
+                Importe = 3200.00m,
+                Estado = "A",
+                EstadoDocumento = "SFIR",
+                EstadoSunat = ""
+            },
+            new Documento
+            {
+                Agencia = "002",
+                Tipo = "BV",
+                Serie = "B003",
+                Numero = "00011122",
+                CodigoCliente = "C0005",
+                NombreCliente = "María López",
+                Moneda = "PEN",
+                Importe = 89.90m,
+                Estado = "A",
+                EstadoDocumento = "FIRM",
+                EstadoSunat = "CDRR"
+            }
+        };
+    }
+
+    void OnRowClick(TableRowClickEventArgs<Documento> args)
+    {
+        _selectedItemText = $"{args.Item.Serie}-{args.Item.Numero}";
+    }
+
+    private Color GetColorEstado(string estado) => estado switch
+    {
+        "V" => Color.Success,    // Verde para Válido/Venta
+        "A" => Color.Error, // Rojo para Anulado
+        _ => Color.Default        // Gris por defecto
+    };
+
+    private string GetIconEstado(string estado) => estado switch
+    {
+        "V" => Icons.Material.Filled.CheckCircle,
+        "A" => Icons.Material.Filled.Cancel,
+        _ => Icons.Material.Filled.Help
+    };
+}

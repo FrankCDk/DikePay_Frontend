@@ -1,0 +1,91 @@
+## Build results
+bin/
+obj/
+out/
+Debug/
+Release/
+
+## Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+## Packages
+*.nupkg
+*.snupkg
+*.nuspec
+packages/
+# Evita ignorar si usas restore automático
+!packages/build/
+!packages/repositories.config
+
+## Logs
+*.log
+logs/
+log/
+
+## Cache
+*.cache
+*.db
+*.db-shm
+*.db-wal
+
+## API documentation
+*.apidoc
+apidoc/
+
+## Publish artifacts
+publish/
+wwwroot/dist/
+wwwroot/lib/
+
+## Secrets / config locales
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.local.json
+
+## User-specific files
+*.user
+*.rsuser
+*.userprefs
+
+## DotNetCore
+project.lock.json
+project.fragment.lock.json
+
+## Resharper / Rider
+.idea/
+*.DotSettings.user
+
+## Testing
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+## Azure
+.localhistory/
+*.azurepubxml
+
+## Docker
+docker-compose.override.yml
+**/Dockerfile.local
+
+## OS generated files
+Thumbs.db
+.DS_Store
+*.tmp
+*.swp
+
+## Entity Framework Migrations (opcional si generas en tiempo real)
+#migrations/
+
