@@ -2,7 +2,8 @@
 @using DikePay.Models.Facturacion;
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    <MudText Typo="Typo.h4">Consola de Documentos</MudText>
+
+    <MudText Typo="Typo.h4" Class="mb-6" Color="Color.Primary"><b>DikePay</b> - Consola de Documentos</MudText>
 
     <MudGrid>
 
@@ -38,22 +39,38 @@
             <MudTable @ref="_table" T="Documento" Items="@Documentos" MultiSelection="true" SelectionChangeable="_selectionChangeable"
                       Hover="true" OnRowClick="@OnRowClick" SelectOnRowClick="@_selectOnRowClick" Bordered="true">
                 <HeaderContent>
-                    <MudTh>AGENCIA</MudTh>
-                    <MudTh>TIPO</MudTh>
-                    <MudTh>DOCUMENTO</MudTh>
-                    <MudTh>CLIENTE</MudTh>
-                    <MudTh>MONTO</MudTh>
-                    <MudTh>ESTADO</MudTh>
-                </HeaderContent>
+                    <MudTh Style="text-align: center;">AGENCIA</MudTh>
+                    <MudTh Style="text-align: center;">TIPO</MudTh>
+                    <MudTh Style="text-align: center;">DOCUMENTO</MudTh>
+                    <MudTh Style="text-align: center;">CLIENTE</MudTh>
+                    <MudTh Style="text-align: center;">MONTO</MudTh>
+                    <MudTh Style="text-align: center;">ESTADO</MudTh>
+                </HeaderContent>       
                 <RowTemplate>
-                    @* IMPORTANTE: Usamos las propiedades reales de tu clase Documento *@
-                    <MudTd DataLabel="Agencia">@context.Agencia</MudTd>
-                    <MudTd DataLabel="Tipo">@context.Tipo</MudTd>
-                    <MudTd DataLabel="Documento">@($"{context.Serie}-{context.Numero}")</MudTd>
-                    <MudTd DataLabel="Cliente">@context.NombreCliente</MudTd>
-                    <MudTd DataLabel="Monto">@context.Importe.ToString("C2")</MudTd>
-                    @* <MudTd DataLabel="Estado">@context.Estado</MudTd> *@
-                    <MudTd DataLabel="Estado">
+                    <MudTd DataLabel="Agencia">
+                        @* Usamos Align="Align.Center" directamente en el componente de texto *@
+                        <MudText Align="Align.Center">@context.Agencia</MudText>
+                    </MudTd>
+
+                    <MudTd DataLabel="Tipo">
+                        <MudText Align="Align.Center">@context.Tipo</MudText>
+                    </MudTd>
+
+                    <MudTd DataLabel="Documento">
+                        <MudText>@($"{context.Serie}-{context.Numero}")</MudText>
+                    </MudTd>
+
+                    <MudTd DataLabel="Cliente">
+                        <MudText>@context.NombreCliente</MudText>
+                    </MudTd>
+
+                    <MudTd DataLabel="Monto">
+                        @* Para montos, Align.Right es ley *@
+                        <MudText Align="Align.Right"><b>@context.Importe.ToString("C2")</b></MudText>
+                    </MudTd>
+
+                    <MudTd DataLabel="Estado" Class="d-flex justify-center">
+                        @* Los Chips ya son elementos de bloque/flex, suelen centrarse bien con la clase en el MudTd *@
                         <MudChip T="string"
                                  Variant="Variant.Text"
                                  Color="@GetColorEstado(context.Estado)"
@@ -66,9 +83,6 @@
                 <PagerContent>
                     <MudTablePager PageSizeOptions="new int[] { 10, 25, 50 }" />
                 </PagerContent>
-                <FooterContent>
-                    <MudTd colspan="5">Select All</MudTd>
-                </FooterContent>
             </MudTable>
         </MudItem>
 
@@ -165,7 +179,7 @@
                 Serie = "B003",
                 Numero = "00011122",
                 CodigoCliente = "C0005",
-                NombreCliente = "María López",
+                NombreCliente = "Melania Montenegro",
                 Moneda = "PEN",
                 Importe = 89.90m,
                 Estado = "A",

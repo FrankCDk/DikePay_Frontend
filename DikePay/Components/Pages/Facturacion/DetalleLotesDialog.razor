@@ -1,0 +1,44 @@
+﻿@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.History" Class="mr-3 mb-n1"/>
+            Lotes de @Producto?.Nombre
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTable Items="@Producto?.Lotes" Dense="true" Hover="true" Elevation="0" Breakpoint="Breakpoint.Sm">
+            <HeaderContent>
+                <MudTh>Código</MudTh>
+                <MudTh>Vence</MudTh>
+                <MudTh Style="text-align:center">Stock</MudTh>
+                <MudTh Style="text-align:right">Costo</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Código">@context.Codigo</MudTd>
+                <MudTd DataLabel="Vence">
+                    <MudText Color="@(context.FechaVencimiento < DateTime.Now ? Color.Error : Color.Default)">
+                        @context.FechaVencimiento.ToShortDateString()
+                    </MudText>
+                </MudTd>
+                <MudTd DataLabel="Stock" Style="text-align:center"><b>@context.CantidadActual</b></MudTd>
+                <MudTd DataLabel="Costo" Style="text-align:right">S/ @context.CostoCompra.ToString("N2")</MudTd>
+            </RowTemplate>
+        </MudTable>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Cerrar">Cerrar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public Inventario.ProductoInv? Producto { get; set; }
+
+    private void Cerrar() => MudDialog.Close();
+}

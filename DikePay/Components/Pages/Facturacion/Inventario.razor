@@ -1,0 +1,227 @@
+﻿@page "/inventario"
+@using MudBlazor
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@using ClosedXML.Excel
+@using System.IO
+@inject IJSRuntime JSRuntime
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudText Typo="Typo.h4" Color="Color.Primary"><b>DikePay</b> - Control de Inventario</MudText>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Success" 
+                   StartIcon="@Icons.Custom.FileFormats.FileExcel" 
+                   OnClick="ExportarAExcel">
+            Exportar Excel
+        </MudButton>
+    </MudStack>
+
+    <MudTable Items="@_productos" Hover="true" Elevation="2" Filter="new Func<ProductoInv, bool>(FilterFunc)" @bind-SelectedItem="_selectedItem" RowsPerPage="10">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Productos</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="_searchString" Placeholder="Buscar producto..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Producto</MudTh>
+            <MudTh>Categoría</MudTh>
+            <MudTh Style="text-align:center">Stock Total</MudTh>
+            <MudTh Style="text-align:right">Precio Venta</MudTh>
+            <MudTh Style="text-align:center">Alertas</MudTh>
+            <MudTh Style="text-align:right">Acciones</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Producto">
+                <MudText Typo="Typo.body2"><b>@context.Nombre</b></MudText>
+                <MudText Typo="Typo.caption">@context.Sku</MudText>
+            </MudTd>
+            <MudTd DataLabel="Categoría">@context.Categoria</MudTd>
+            <MudTd DataLabel="Stock Total" Style="text-align:center">
+                <MudChip T="string" Size="Size.Small" Color="@(context.StockTotal <= context.StockMinimo ? Color.Error : Color.Default)">
+                    @context.StockTotal
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Precio Venta" Style="text-align:right">S/ @context.PrecioVenta.ToString("N2")</MudTd>
+            <MudTd DataLabel="Alertas" Style="text-align:center">
+                @if (context.Lotes.Any(l => l.FechaVencimiento < DateTime.Now.AddDays(15)))
+                {
+                    <MudTooltip Text="Lote por vencer o vencido">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" />
+                    </MudTooltip>
+                }
+            </MudTd>
+            <MudTd Style="text-align:right">
+                <MudIconButton Icon="@Icons.Material.Filled.History" Color="Color.Info" Size="Size.Small" OnClick="@(() => VerLotes(context))" Title="Ver Lotes" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" />
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager InfoFormat="{first_item}-{last_item} de {all_items}" RowsPerPageString="Filas por página:" />
+        </PagerContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+
+    private bool _exportando = false;
+    private bool _verLotesOpen;
+    private ProductoInv? _productoSeleccionado;
+    private string _searchString = "";
+    private ProductoInv _selectedItem = null!;
+    private DialogOptions _dialogOptions = new() { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+
+    private void VerLotes(ProductoInv prod)
+    {
+        if (prod == null) return;
+
+        // Lógica Senior: Preparamos los parámetros para el nuevo componente
+        var parameters = new DialogParameters();
+        parameters.Add("Producto", prod); // Usamos el nombre del parámetro como string para evitar errores de tipado
+
+        var options = new DialogOptions() { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true,
+            BackdropClick = true 
+        };
+
+        DialogService.Show<DetalleLotesDialog>("Detalle de Inventario", parameters, options);
+    }
+
+    private bool FilterFunc(ProductoInv element) => string.IsNullOrWhiteSpace(_searchString) || element.Nombre.Contains(_searchString, StringComparison.OrdinalIgnoreCase) || element.Sku.Contains(_searchString);
+
+    private List<ProductoInv> _productos = new();
+
+    protected override void OnInitialized()
+    {
+        // Consolidación de datos originales + 20 adicionales
+        _productos = new List<ProductoInv>
+        {
+            // --- TUS ORIGINALES ---
+            CrearProd("Arroz Costeño 1kg", "ARR-001", "Abarrotes", 4.50m, 3.80m, 100, true),
+            CrearProd("Aceite Primor 1L", "ACE-002", "Abarrotes", 11.20m, 9.50m, 50, true),
+            CrearProd("Leche Gloria Azul 400g", "LEC-003", "Lácteos", 3.80m, 3.10m, 120, true),
+            CrearProd("Fideos Don Vittorio 500g", "FID-004", "Abarrotes", 3.20m, 2.50m, 80, false),
+            CrearProd("Detergente Bolívar 1kg", "DET-005", "Limpieza", 9.50m, 7.80m, 40, false),
+            
+            // --- 20 ADICIONALES ---
+            CrearProd("Atún Primor Trozos", "ATU-001", "Conservas", 6.50m, 4.20m, 45, true),
+            CrearProd("Yogurt Gloria Fresa 1L", "YOG-002", "Lácteos", 7.20m, 5.10m, 20, true),
+            CrearProd("Galletas Soda Field", "GAL-006", "Snacks", 0.80m, 0.50m, 200, true),
+            CrearProd("Gaseosa Inca Kola 500ml", "GAS-007", "Bebidas", 2.50m, 1.80m, 60, true),
+            CrearProd("Pan de Molde Bimbo", "PAN-008", "Panadería", 8.50m, 6.20m, 15, true),
+            CrearProd("Sal Marina Lobos 1kg", "SAL-009", "Abarrotes", 2.00m, 1.20m, 100, false),
+            CrearProd("Azúcar Rubia Paramonga 1kg", "AZU-010", "Abarrotes", 4.20m, 3.50m, 90, false),
+            CrearProd("Café Altomayo 200g", "CAF-011", "Abarrotes", 15.00m, 12.00m, 30, true),
+            CrearProd("Mermelada Fanny Fresa", "MER-012", "Abarrotes", 5.50m, 4.00m, 25, true),
+            CrearProd("Mayonesa Alacena 200g", "MAY-013", "Salsas", 4.80m, 3.50m, 40, true),
+            CrearProd("Papel Higiénico Elite 4un", "PAP-014", "Limpieza", 6.50m, 4.80m, 55, false),
+            CrearProd("Shampoo Head & Shoulders", "SHA-015", "Cuidado Personal", 18.50m, 14.20m, 20, false),
+            CrearProd("Jabón Bolívar 150g", "JAB-016", "Limpieza", 2.50m, 1.80m, 80, false),
+            CrearProd("Lentejas Costeño 500g", "LEN-017", "Menestras", 4.50m, 3.20m, 50, true),
+            CrearProd("Chocolate Sublime", "CHO-018", "Golosinas", 2.50m, 1.70m, 100, true),
+            CrearProd("Queso Edam Laive", "QUE-019", "Lácteos", 12.50m, 9.80m, 12, true),
+            CrearProd("Huevo de Corral (Jaba 30)", "HUE-020", "Fresco", 16.50m, 13.50m, 10, true),
+            CrearProd("Mantequilla Gloria 200g", "MAN-021", "Lácteos", 6.20m, 4.80m, 35, true),
+            CrearProd("Vinagre Blanco Primor", "VIN-022", "Abarrotes", 2.80m, 1.90m, 20, false),
+            CrearProd("Ajinomen Pollo", "AJI-023", "Instantáneos", 1.80m, 1.20m, 150, true),
+            CrearProd("Harina Blanca Flor 1kg", "HAR-024", "Abarrotes", 6.50m, 4.90m, 40, true),
+            CrearProd("Avena 3 Ositos 500g", "AVE-025", "Abarrotes", 3.50m, 2.60m, 60, true)
+        };
+    }
+
+    // Método Helper Senior para no repetir código al crear mock data
+    private ProductoInv CrearProd(string nom, string sku, string cat, decimal pVenta, decimal pCosto, int cant, bool tieneVencimiento)
+    {
+        var p = new ProductoInv { Nombre = nom, Sku = sku, Categoria = cat, PrecioVenta = pVenta, StockMinimo = 10 };
+        p.Lotes.Add(new Lote { 
+            Codigo = "LOT-GEN-" + sku, 
+            CantidadActual = cant, 
+            CostoCompra = pCosto, 
+            FechaVencimiento = tieneVencimiento ? DateTime.Now.AddMonths(8) : DateTime.Now.AddYears(10) 
+        });
+        return p;
+    }
+
+    public class ProductoInv {
+        public string Nombre { get; set; } = "";
+        public string Sku { get; set; } = "";
+        public string Categoria { get; set; } = "";
+        public decimal PrecioVenta { get; set; }
+        public int StockMinimo { get; set; }
+        public List<Lote> Lotes { get; set; } = new();
+        public int StockTotal => Lotes.Sum(l => l.CantidadActual);
+    }
+
+    public class Lote {
+        public string Codigo { get; set; } = "";
+        public DateTime FechaIngreso { get; set; } = DateTime.Now;
+        public DateTime FechaVencimiento { get; set; }
+        public int CantidadActual { get; set; }
+        public decimal CostoCompra { get; set; }
+    }
+
+    private void AbrirNuevoProducto() => Snackbar.Add("Abre el diálogo de nuevo producto", Severity.Info);
+
+    private async Task ExportarAExcel()
+    {
+        if (_exportando) return; // Evita clics dobles
+
+        try
+        {
+            _exportando = true; // Iniciamos carga
+            
+            // Usamos Task.Run para que la generación pesada no congele la UI
+            // Esto es una práctica Senior para mantener la fluidez
+            var base64 = await Task.Run(() => {
+                using (var workbook = new XLWorkbook())
+                {
+                    var worksheet = workbook.Worksheets.Add("Inventario");
+
+                    var headerRow = worksheet.Row(1);
+                    headerRow.Cell(1).Value = "Producto";
+                    headerRow.Cell(2).Value = "SKU";
+                    headerRow.Cell(3).Value = "Categoría";
+                    headerRow.Cell(4).Value = "Stock Total";
+                    headerRow.Cell(5).Value = "Precio Venta";
+                    
+                    headerRow.Style.Font.Bold = true;
+                    headerRow.Style.Fill.BackgroundColor = XLColor.LightGray; // Ahora sí lo reconocerá
+
+                    int row = 2;
+                    foreach (var prod in _productos)
+                    {
+                        worksheet.Cell(row, 1).Value = prod.Nombre;
+                        worksheet.Cell(row, 2).Value = prod.Sku;
+                        worksheet.Cell(row, 3).Value = prod.Categoria;
+                        worksheet.Cell(row, 4).Value = prod.StockTotal;
+                        worksheet.Cell(row, 5).Value = prod.PrecioVenta;
+                        row++;
+                    }
+
+                    worksheet.Columns().AdjustToContents();
+
+                    using (var stream = new MemoryStream())
+                    {
+                        workbook.SaveAs(stream);
+                        return Convert.ToBase64String(stream.ToArray());
+                    }
+                }
+            });
+
+            // Llamada al JS
+            await JSRuntime.InvokeVoidAsync("descargarExcel", "Inventario_2025.xlsx", base64);
+            
+            Snackbar.Add("Exportación exitosa", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _exportando = false; // Terminamos carga
+        }
+    }
+}

@@ -1,4 +1,141 @@
 ﻿@page "/dashboard"
+@using MudBlazor
 
-<MudText Typo="Typo.h3">Bienvenido a DikePay</MudText>
-<MudText>Este es el dashboard principal.</MudText>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8">
+
+    <MudText Typo="Typo.h4" Class="mb-6" Color="Color.Primary"><b>DikePay</b> - Resumen de Negocio</MudText>
+
+    <MudGrid>
+        @* --- TARJETAS DE RESUMEN (KPIs) --- *@
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 rounded-lg" Elevation="2" Style="border-left: 6px solid #594ae2;">
+                <MudStack Row="true" AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Color="Color.Primary" Size="Size.Large" />
+                    <div>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Ventas Hoy</MudText>
+                        <MudText Typo="Typo.h6"><b>S/ 1,250.00</b></MudText>
+                    </div>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 rounded-lg" Elevation="2" Style="border-left: 6px solid #00c853;">
+                <MudStack Row="true" AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Color="Color.Success" Size="Size.Large" />
+                    <div>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Pedidos</MudText>
+                        <MudText Typo="Typo.h6"><b>42</b></MudText>
+                    </div>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 rounded-lg" Elevation="2" Style="border-left: 6px solid #ff9800;">
+                <MudStack Row="true" AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Warning" Size="Size.Large" />
+                    <div>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Ticket Promedio</MudText>
+                        <MudText Typo="Typo.h6"><b>S/ 29.80</b></MudText>
+                    </div>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 rounded-lg" Elevation="2" Style="border-left: 6px solid #f44336;">
+                <MudStack Row="true" AlignItems="AlignItems.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory" Color="Color.Error" Size="Size.Large" />
+                    <div>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Stock Bajo</MudText>
+                        <MudText Typo="Typo.h6"><b>5 Prod.</b></MudText>
+                    </div>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        @* --- GRÁFICO DE VENTAS --- *@
+        <MudItem xs="12" md="8">
+            <MudPaper Class="pa-6 rounded-lg" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-4">Ventas de la Semana</MudText>
+                <MudChart ChartType="ChartType.Line" 
+                          ChartSeries="@Series" 
+                          XAxisLabels="@Labels" 
+                          Width="100%" 
+                          Height="300px" 
+                          ChartOptions="@_chartOptions" />
+            </MudPaper>
+        </MudItem>
+
+        @* --- PRODUCTOS MÁS VENDIDOS --- *@
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-6 rounded-lg" Elevation="2" Style="height: 100%;">
+                <MudText Typo="Typo.h6" Class="mb-4">Más Vendidos</MudText>
+                <MudList T="string" Dense="true">
+                    @foreach (var prod in _topProductos)
+                    {
+                        <MudListItem>
+                            <div class="d-flex justify-space-between align-center">
+                                <MudText Typo="Typo.body2">@prod.Nombre</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">@prod.Ventas und.</MudChip>
+                            </div>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                </MudList>
+            </MudPaper>
+        </MudItem>
+
+        @* --- ÚLTIMAS TRANSACCIONES --- *@
+        <MudItem xs="12">
+            <MudTable Items="@_ultimasVentas" Elevation="2" Class="rounded-lg" Hover="true" Breakpoint="Breakpoint.Sm">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Últimas Ventas</MudText>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh>Hora</MudTh>
+                    <MudTh>Cliente</MudTh>
+                    <MudTh>Método</MudTh>
+                    <MudTh Style="text-align:right">Total</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Hora">@context.Hora</MudTd>
+                    <MudTd DataLabel="Cliente">@context.Cliente</MudTd>
+                    <MudTd DataLabel="Método">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@context.Metodo</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Total" Style="text-align:right"><b>S/ @context.Total.ToString("N2")</b></MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private readonly ChartOptions _chartOptions = new() { InterpolationOption = InterpolationOption.NaturalSpline, YAxisTicks = 200 };
+    
+    public List<ChartSeries> Series = new()
+    {
+        new ChartSeries { Name = "Soles (S/)", Data = [400, 700, 550, 900, 1100, 1250, 1000] }
+    };
+    public string[] Labels = { "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom" };
+
+    private List<TopProduct> _topProductos = new()
+    {
+        new ("Aceite Primor 1L", 85),
+        new ("Arroz Costeño 1kg", 72),
+        new ("Leche Gloria Azul", 60),
+        new ("Detergente Bolívar", 45)
+    };
+
+    private List<RecienteVenta> _ultimasVentas = new()
+    {
+        new ("14:20", "Público General", "YAPE", 45.50m),
+        new ("13:55", "Juan Perez", "VISA", 120.00m),
+        new ("13:10", "Público General", "EFECTIVO", 12.80m)
+    };
+
+    record TopProduct(string Nombre, int Ventas);
+    record RecienteVenta(string Hora, string Cliente, string Metodo, decimal Total);
+}

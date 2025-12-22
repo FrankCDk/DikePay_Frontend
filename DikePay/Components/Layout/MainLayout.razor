@@ -1,7 +1,8 @@
 ﻿@inherits LayoutComponentBase
 @using Microsoft.Maui.Devices
+@inject NavigationManager Navigation
 
-<MudThemeProvider Theme="_dikePayTheme" />
+<MudThemeProvider Theme="_dikePayTheme" @bind-IsDarkMode="@_isDarkMode" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -12,9 +13,19 @@
     }
 
     /* Estos estilos SOLO afectarán si el contenedor tiene la clase 'is-mobile' */
-    .is-mobile .status-bar-safe-area {
+    /* .is-mobile .status-bar-safe-area {
         height: var(--safe-area-top);
         background-color: #594AE2;
+        width: 100%;
+        position: fixed;
+        top: 0;
+        z-index: 1400;
+        display: block;
+    } */
+
+    .is-mobile .status-bar-safe-area {
+        height: var(--safe-area-top);
+        background-color: var(--mud-palette-appbar-background);
         width: 100%;
         position: fixed;
         top: 0;
@@ -48,6 +59,10 @@
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
         <MudText Typo="Typo.h6" Class="ml-3">DikePay</MudText>
         <MudSpacer />
+        <MudToggleIconButton @bind-Toggled="@_isDarkMode"
+                             Icon="@Icons.Material.Filled.DarkMode" Color="Color.Inherit"
+                             ToggledIcon="@Icons.Material.Filled.LightMode" ToggledColor="Color.Inherit"
+                             Title="Cambiar modo" />
 
         @* Notificaciones *@
         <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" ActivationEvent="MouseEvent.LeftClick" PopoverClass="mud-popover-cascading"  >
@@ -95,7 +110,7 @@
                         <MudListItem Icon="@Icons.Material.Outlined.PersonAdd" IconColor="Color.Info">
                             <div class="d-flex flex-column">
                                 <MudText Typo="Typo.body2"><b>Nuevo Usuario</b></MudText>
-                                <MudText Typo="Typo.caption">Se ha registrado el vendedor: Maria Perez.</MudText>
+                                <MudText Typo="Typo.caption">Se ha registrado el vendedor: Yahaira Vela.</MudText>
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">Hace 2 días</MudText>
                             </div>
                         </MudListItem>
@@ -111,13 +126,13 @@
         @* Menú de Usuario *@
         <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" ActivationEvent="MouseEvent.LeftClick" PopoverClass="mud-popover-cascading">
             <ActivatorContent>
-                <MudAvatar Color="Color.Secondary">JD</MudAvatar>
+                <MudAvatar Color="Color.Secondary">FC</MudAvatar>
             </ActivatorContent>
             <ChildContent>
                 <MudMenuItem Icon="@Icons.Material.Outlined.Person">Mi Perfil</MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Outlined.Security">Seguridad</MudMenuItem>
                 <MudDivider />
-                <MudMenuItem Icon="@Icons.Material.Outlined.Logout" Color="Color.Error">Cerrar Sesión</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Outlined.Logout" Color="Color.Error" OnClick="CerrarSesion">Cerrar Sesión</MudMenuItem>
             </ChildContent>
         </MudMenu>
     </MudAppBar>
@@ -139,6 +154,7 @@
     bool _drawerOpen = true;
     private bool _isMobile;
     private string _layoutClass = "";
+    private bool _isDarkMode;
 
     protected override void OnInitialized()
     {
@@ -148,6 +164,7 @@
 
         // Si es móvil, aplicamos la clase que activa el CSS especial
         _layoutClass = _isMobile ? "is-mobile" : "";
+        _isDarkMode = AppInfo.RequestedTheme == AppTheme.Dark;
     }
 
     void DrawerToggle()
@@ -159,13 +176,32 @@
     {
         PaletteLight = new PaletteLight()
         {
-            Primary = "#594AE2",          // Un morado/azul más moderno
-            Secondary = "#00C853",        // Verde para temas de éxito/pagos
+            Primary = "#594AE2",
+            Secondary = "#00C853",
             AppbarBackground = "#594AE2",
+            Background = "#F5F5F9", // Un gris muy suave para el fondo
+            Surface = "#FFFFFF"
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#9E93FF",         // Un violeta más claro para que resalte en negro
+            Secondary = "#00E676",
+            AppbarBackground = "#1A1A27",
+            Background = "#121212",      // Color base de Android Dark Mode
+            Surface = "#1E1E2D",         // Color para las tarjetas (MudPaper)
+            DrawerBackground = "#1A1A27",
+            TextPrimary = "#E3E3E3",
+            ActionDefault = "#ADADB1"
         },
         LayoutProperties = new LayoutProperties()
         {
-            DefaultBorderRadius = "8px", // Bordes más suaves en toda la app
+            DefaultBorderRadius = "12px", // Bordes un poco más modernos
         }
     };
+
+    private void CerrarSesion(){
+
+        Navigation.NavigateTo("/");
+
+    }
 }

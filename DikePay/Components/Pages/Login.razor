@@ -39,15 +39,43 @@
                     <MudLink href="/forgot-password" Typo="Typo.caption">¿Olvidaste tu contraseña?</MudLink>
                 </div>
 
-                @* El botón ahora es ButtonType.Submit *@
+                @* Botón Principal de Ingreso *@
                 <MudButton ButtonType="ButtonType.Submit"
                            Variant="Variant.Filled"
                            Color="Color.Primary"
                            Size="Size.Large"
                            FullWidth="true"
+                           Disabled="@_loading"
                            Style="text-transform: none; height: 50px; font-weight: bold;">
-                    Ingresar
+                    @if (_loading)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ms-2">INGRESANDO...</MudText>
+                    }
+                    else
+                    {
+                        <MudText>INGRESAR</MudText>
+                    }
                 </MudButton>
+
+                @* SEPARADOR VISUAL (Nivel Senior) *@
+                <div class="d-flex align-center my-4">
+                    <hr style="flex-grow: 1; border: 0; border-top: 1px solid var(--mud-palette-divider);" />
+                    <MudText Typo="Typo.body2" Class="mx-4" Color="Color.Primary">O</MudText>
+                    <hr style="flex-grow: 1; border: 0; border-top: 1px solid var(--mud-palette-divider);" />
+                </div>
+
+                @* BOTÓN DE GOOGLE *@
+                <MudButton Variant="Variant.Outlined"
+                           FullWidth="true"
+                           StartIcon="@Icons.Custom.Brands.Google"
+                           OnClick="LoginConGoogle"
+                           Disabled="@_loading"
+                           Style="text-transform: none; height: 50px; border-color: #ddd;"
+                           Color="Color.Primary">
+                    Continuar con Google
+                </MudButton>
+               
             </MudStack>
         </MudPaper>
     </EditForm>
@@ -58,6 +86,7 @@
     private bool _isShowPassword;
     private InputType _passwordInput = InputType.Password;
     private string _passwordInputIcon = Icons.Material.Filled.VisibilityOff;
+    private bool _loading;
 
     void TogglePasswordVisibility()
     {
@@ -77,13 +106,38 @@
 
     private async Task OnValidSubmit()
     {
-        // 1. Mostrar el Toast (Snackbar) de éxito
-        Snackbar.Add("Inicio de sesión exitoso. ¡Bienvenido!", Severity.Success);
+        try
+        {
+            // Bloqueamos el botón inmediatamente
+            _loading = true;
 
-        // 2. Simulamos una pequeña espera para que el usuario vea el mensaje
-        await Task.Delay(1500);
+            // 1. Simulamos la consulta a la base de datos o API (2 segundos)
+            await Task.Delay(2000);
 
-        // 3. Navegamos al Dashboard
-        Navigation.NavigateTo("/dashboard");
+            // 2. AQUÍ IRÍA TU LLAMADA REAL AL SERVICIO:
+            // var result = await AuthService.Login(_model);
+            
+            // 3. Navegamos al Dashboard
+            Navigation.NavigateTo("/dashboard");
+        }
+        catch (Exception ex)
+        {
+            // Si hay un error (ej. credenciales inválidas o falla de red)
+            Snackbar.Add("Error al iniciar sesión: " + ex.Message, Severity.Error);
+            
+            // Al salir del catch, el finally se encargará de desbloquear el botón
+        }
+        finally
+        {
+            // Muy importante: Pase lo que pase, desbloqueamos el botón 
+            // a menos que hayamos navegado fuera de la página
+            _loading = false;
+        }
+    }
+
+    private void LoginConGoogle()
+    {
+        // En un futuro, aquí llamarías a tu servicio de OAuth2
+        Snackbar.Add("El inicio de sesión con Google estará disponible pronto.", Severity.Info);
     }
 }
