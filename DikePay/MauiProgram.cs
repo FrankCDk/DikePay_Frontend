@@ -1,4 +1,5 @@
-﻿using DikePay.Helpers;
+﻿using DikePay.Extensions;
+using DikePay.Helpers;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 using MudBlazor.Services;
@@ -36,7 +37,22 @@ namespace DikePay
 
             builder.Services.AddSingleton<BarcodeScannerService>();
             builder.Services.AddMauiBlazorWebView();
-            
+            builder.Services.AddApiServices();
+
+            //builder.Services.AddSingleton<IDataBaseContext, DataBaseContext>();
+            //builder.Services.AddScoped<IArticuloRepository, ArticuloRepository>();
+            //builder.Services.AddSingleton<AppState>();
+
+
+            //// Definimos la configuración central de nuestra API
+            //builder.Services.AddHttpClient("DikePayApi", client =>
+            //{
+            //    client.BaseAddress = new Uri("https://tu-api.com/"); // Cambia esto por tu URL real
+            //    client.DefaultRequestHeaders.Add("Accept", "application/json");
+            //})
+            //.AddTransientHttpErrorPolicy(policy =>
+            //    policy.WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(2)));
+            //// ^ Polly aplicado a nivel global para este cliente
 
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();

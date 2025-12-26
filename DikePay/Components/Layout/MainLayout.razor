@@ -1,6 +1,12 @@
 ﻿@inherits LayoutComponentBase
+@using DikePay.Services.Interfaces
+@using DikePay.State
 @using Microsoft.Maui.Devices
 @inject NavigationManager Navigation
+@inject ISyncService SyncService
+@inject IAuthService AuthService
+@implements IDisposable
+@inject AppState AppStateInstance
 
 <MudThemeProvider Theme="_dikePayTheme" @bind-IsDarkMode="@_isDarkMode" />
 <MudPopoverProvider />
@@ -46,6 +52,15 @@
         height: calc(100% - var(--safe-area-top)) !important;
     }
 </style>
+
+
+@if (SyncService.EstaSincronizando)
+{
+    <MudAlert Severity="Severity.Info" Variant="Variant.Filled" Dense="true" Class="mb-4">
+        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+        Actualizando catálogo de productos...
+    </MudAlert>
+}
 
 <MudLayout Class="@_layoutClass">
 
@@ -126,9 +141,17 @@
         @* Menú de Usuario *@
         <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" ActivationEvent="MouseEvent.LeftClick" PopoverClass="mud-popover-cascading">
             <ActivatorContent>
-                <MudAvatar Color="Color.Secondary">FC</MudAvatar>
+                @* <MudAvatar Color="Color.Secondary">FC</MudAvatar> *@
+                <MudAvatar Color="Color.Secondary">@ObtenerIniciales()</MudAvatar>
             </ActivatorContent>
             <ChildContent>
+                <div class="pa-4 d-flex flex-column align-center" style="min-width: 150px;">
+                    <MudAvatar Color="Color.Secondary" Style="height:60px; width:60px;">@ObtenerIniciales()</MudAvatar>
+                    <MudText Typo="Typo.body1" Class="mt-2" Style="font-weight: bold;">@UsuarioNombre</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@UsuarioEmail</MudText>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="mt-1">@UsuarioRol</MudChip>
+                </div>
+                <MudDivider />
                 <MudMenuItem Icon="@Icons.Material.Outlined.Person">Mi Perfil</MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Outlined.Security">Seguridad</MudMenuItem>
                 <MudDivider />
@@ -156,6 +179,19 @@
     private string _layoutClass = "";
     private bool _isDarkMode;
 
+    private string UsuarioNombre => AppStateInstance.UsuarioActivo?.NombreCompleto ?? "Usuario";
+    private string UsuarioEmail => AppStateInstance.UsuarioActivo?.Email ?? "Sin correo";
+    private string UsuarioRol => AppStateInstance.UsuarioActivo?.Rol ?? "Invitado";
+
+    // Generar iniciales para el Avatar (ej: "Frank Casuso" -> "FC")
+    private string ObtenerIniciales()
+    {
+        if (string.IsNullOrWhiteSpace(UsuarioNombre)) return "??";
+        var palabras = UsuarioNombre.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (palabras.Length == 1) return palabras[0][0].ToString().ToUpper();
+        return (palabras[0][0].ToString() + palabras[1][0].ToString()).ToUpper();
+    }
+
     protected override void OnInitialized()
     {
         // Detectamos si es móvil una sola vez al iniciar
@@ -165,7 +201,11 @@
         // Si es móvil, aplicamos la clase que activa el CSS especial
         _layoutClass = _isMobile ? "is-mobile" : "";
         _isDarkMode = AppInfo.RequestedTheme == AppTheme.Dark;
+
+        AppStateInstance.OnChange += StateHasChanged;
     }
+
+    public void Dispose() => AppStateInstance.OnChange -= StateHasChanged;
 
     void DrawerToggle()
     {
@@ -199,8 +239,9 @@
         }
     };
 
-    private void CerrarSesion(){
+    private async Task CerrarSesion(){
 
+        await AuthService.LogoutAsync();
         Navigation.NavigateTo("/");
 
     }

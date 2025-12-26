@@ -1,6 +1,9 @@
 ﻿@page "/"
 @layout AuthLayout
 @using DikePay.Models
+@using DikePay.Services.Interfaces
+@inject IAuthService AuthService
+@inject ISyncService SyncService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 
@@ -108,29 +111,37 @@
     {
         try
         {
-            // Bloqueamos el botón inmediatamente
             _loading = true;
 
-            // 1. Simulamos la consulta a la base de datos o API (2 segundos)
-            await Task.Delay(2000);
+            // 1. Llamada real a nuestro AuthService híbrido (Online/Offline)
+            bool success = await AuthService.LoginAsync(_model.Email, _model.Password);
 
-            // 2. AQUÍ IRÍA TU LLAMADA REAL AL SERVICIO:
-            // var result = await AuthService.Login(_model);
-            
-            // 3. Navegamos al Dashboard
-            Navigation.NavigateTo("/dashboard");
+            if (success)
+            {
+                
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await SyncService.SincronizarTodoAsync();
+                    }
+                    catch (Exception) { /* Loguear error de sync silencioso */ }
+                });
+
+                // 3. Navegamos al Dashboard
+                Navigation.NavigateTo("/dashboard");
+            }
+            else
+            {
+                Snackbar.Add("Credenciales incorrectas o sin acceso offline.", Severity.Error);
+            }
         }
         catch (Exception ex)
         {
-            // Si hay un error (ej. credenciales inválidas o falla de red)
-            Snackbar.Add("Error al iniciar sesión: " + ex.Message, Severity.Error);
-            
-            // Al salir del catch, el finally se encargará de desbloquear el botón
+            Snackbar.Add("Error de conexión: " + ex.Message, Severity.Error);
         }
         finally
         {
-            // Muy importante: Pase lo que pase, desbloqueamos el botón 
-            // a menos que hayamos navegado fuera de la página
             _loading = false;
         }
     }

@@ -42,9 +42,9 @@
 
     protected override void OnInitialized()
     {
-        _dialogTitle = Articulo.Id == 0 ? "Nuevo Artículo" : $"Editar Artículo (ID: {Articulo.Id})";
+        _dialogTitle = Articulo.Codigo == "" ? "Nuevo Artículo" : $"Editar Artículo (CODIGO: {Articulo.Codigo})";
         // Si es un nuevo artículo y el SKU está vacío, lo generamos automáticamente
-        if (Articulo.Id == 0 && string.IsNullOrEmpty(Articulo.CodigoSku))
+        if (Articulo.Codigo == "" && string.IsNullOrEmpty(Articulo.CodigoSku))
         {
             // Esto es solo un ejemplo. En un sistema real, harías una llamada a la API
             // o a un servicio para obtener el siguiente ID y construir un SKU único.
