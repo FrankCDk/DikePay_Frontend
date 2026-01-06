@@ -1,4 +1,4 @@
-﻿using DikePay.Models.DTOs.Articulos;
+﻿using DikePay.DTOs.Articulos.Response;
 
 namespace DikePay.Services.Interfaces
 {

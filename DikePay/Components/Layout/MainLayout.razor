@@ -5,8 +5,10 @@
 @inject NavigationManager Navigation
 @inject ISyncService SyncService
 @inject IAuthService AuthService
+@inject ISyncWorkerService SyncWorker
 @implements IDisposable
 @inject AppState AppStateInstance
+@inject MudBlazor.ISnackbar SnackbarService
 
 <MudThemeProvider Theme="_dikePayTheme" @bind-IsDarkMode="@_isDarkMode" />
 <MudPopoverProvider />
@@ -202,10 +204,44 @@
         _layoutClass = _isMobile ? "is-mobile" : "";
         _isDarkMode = AppInfo.RequestedTheme == AppTheme.Dark;
 
-        AppStateInstance.OnChange += StateHasChanged;
+        AppStateInstance.OnChange += HandleStateChanged;
+        SyncService.OnSyncCompleted += HandleSyncSuccess; // Suscripción al éxito de la sincronización
+        SyncService.OnSyncError += HandleSyncError;
+
+        _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await SyncService.SincronizarTodoAsync();
+                    }
+                    catch (Exception) { /* Loguear error de sync silencioso */ }
+                });
+
+        // Nos suscribimos al evento
+        // SyncWorker.OnSyncCompleted += (mensaje) =>
+        // {
+        //     // ¡OJO SENIOR!: Los eventos de fondo vienen en otro hilo,
+        //     // hay que pasarlos al hilo de la UI para que MudBlazor no explote.
+        //     MainThread.BeginInvokeOnMainThread(() =>
+        //     {
+        //         Snackbar.Add(mensaje, Severity.Success);
+        //         StateHasChanged();
+        //     });
+        // };
+
+        // SyncWorker.Start();
+
     }
 
-    public void Dispose() => AppStateInstance.OnChange -= StateHasChanged;
+    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        AppStateInstance.OnChange -= HandleStateChanged;
+        // ¡No olvides desuscribirte para evitar fugas de memoria!
+        SyncService.OnSyncCompleted -= HandleSyncSuccess;
+        SyncService.OnSyncError -= HandleSyncError;
+    }
 
     void DrawerToggle()
     {
@@ -244,5 +280,33 @@
         await AuthService.LogoutAsync();
         Navigation.NavigateTo("/");
 
+    }
+
+    private void HandleSyncSuccess(string mensaje)
+    {
+        // IMPORTANTE: El evento viene de un hilo de fondo del Task.Run
+        // Debemos regresar al hilo de la UI para mostrar el Snackbar
+        InvokeAsync(() =>
+        {
+            SnackbarService.Add(mensaje, Severity.Success, config =>
+            {
+                config.VisibleStateDuration = 5000;
+                config.HideTransitionDuration = 500;
+            });
+            StateHasChanged();
+        });
+    }
+
+    private void HandleSyncError(string mensaje)
+    {
+        InvokeAsync(() =>
+        {
+            SnackbarService.Add(mensaje, Severity.Error, config =>
+            {
+                config.VisibleStateDuration = 7000; // Un poco más de tiempo para errores
+                config.DuplicatesBehavior = SnackbarDuplicatesBehavior.Prevent; // No llenar la pantalla de errores iguales
+            });
+            StateHasChanged();
+        });
     }
 }

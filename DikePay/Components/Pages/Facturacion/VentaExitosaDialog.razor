@@ -1,6 +1,10 @@
 ﻿@using MudBlazor
 @using Microsoft.Maui.ApplicationModel @* Necesario para Browser.OpenAsync *@
+@using Microsoft.Maui.Storage @* Para FileSystem *@
+@using Microsoft.Maui.ApplicationModel.DataTransfer @* Para Share *@
+@using DikePay.Services.Interfaces
 @inject ISnackbar Snackbar
+@inject IPdfService PdfService
 
 <MudDialog>
     <DialogContent>
@@ -70,13 +74,24 @@
             <MudText Typo="Typo.caption" Color="Color.Secondary">Envíe el comprobante digital al cliente</MudText>
 
             <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       StartIcon="@Icons.Material.Filled.Print"
+                       Size="Size.Large"
+                       OnClick="PrepararComprobanteYCompartir"
+                       Class="rounded-pill mb-2">
+                IMPRIMIR / GENERAR PDF
+            </MudButton>
+
+            @* Botón Secundario: Texto plano (El que sí abre WhatsApp directo) *@
+            <MudButton Variant="Variant.Outlined"
                        Color="Color.Success"
                        FullWidth="true"
                        StartIcon="@Icons.Custom.Brands.WhatsApp"
-                       Size="Size.Large"
-                       OnClick="CompartirWhatsApp"
+                       Size="Size.Medium"
+                       OnClick="CompartirSoloTexto"
                        Class="rounded-pill">
-                ENVIAR POR WHATSAPP
+                ENVIAR RESUMEN POR WHATSAPP
             </MudButton>
 
         </MudStack>
@@ -92,49 +107,38 @@
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
 
-    // Recibimos los datos de la venta como parámetros
     [Parameter] public string SerieNumero { get; set; } = "B001-000001";
     [Parameter] public decimal TotalPagado { get; set; }
     [Parameter] public decimal Descuento { get; set; }
     [Parameter] public string MetodoPago { get; set; } = "CONTADO";
     [Parameter] public List<dynamic> ProductosVendidos { get; set; } = new();
-    // Nota: He usado 'dynamic' por si tu clase CarritoItem no está accesible aquí,
-    // pero lo ideal es usar tu clase: List<CarritoItem>
 
     private void Cerrar() => MudDialog.Close(DialogResult.Ok(true));
 
-    private async Task CompartirWhatsApp()
+    // Cambiamos el nombre para que sea honesto con lo que hace
+    private async Task PrepararComprobanteYCompartir()
     {
         try
         {
-            // Construcción del mensaje con formato WhatsApp
-            string mensaje = $"*DIKEPAY - Comprobante Electrónico*%0A" +
-                             $"---------------------------------%0A" +
-                             $"*Boleta:* {SerieNumero}%0A" +
-                             $"*Fecha:* {DateTime.Now:dd/MM/yyyy HH:mm}%0A" +
-                             $"*Método:* {MetodoPago}%0A%0A" +
-                             $"*Productos:*%0A";
-
-            foreach (var item in ProductosVendidos)
-            {
-                mensaje += $"- {item.Cantidad} {item.Nombre} (S/ {item.Precio * item.Cantidad:N2})%0A";
-            }
-
-            if (Descuento > 0)
-                mensaje += $"%0A*Descuento:* -S/ {Descuento:N2}";
-
-            mensaje += $"%0A*TOTAL PAGADO: S/ {TotalPagado:N2}*%0A" +
-                       $"---------------------------------%0A" +
-                       $"Visualiza tu ticket aquí: [Link Opcional]%0A" +
-                       $"¡Gracias por tu compra!";
-
-            // Abrir WhatsApp usando el Launcher de MAUI
-            var url = $"https://wa.me/?text={mensaje}";
-            await Browser.Default.OpenAsync(url, BrowserLaunchMode.External);
+            await PdfService.GenerarYCompartirAsync(SerieNumero, TotalPagado, ProductosVendidos);
+            Snackbar.Add("Seleccione 'Guardar como PDF' para enviar por WhatsApp", Severity.Info);
         }
         catch (Exception ex)
         {
-            Snackbar.Add("No se pudo abrir WhatsApp: " + ex.Message, Severity.Error);
+            // FALLBACK: Si falla la impresión, enviamos el texto plano para no dejar al usuario colgado
+            await CompartirSoloTexto();
+            Snackbar.Add("Enviando como texto plano...", Severity.Info);
         }
     }
+
+    private async Task CompartirSoloTexto()
+    {
+        string mensaje = $"*DIKEPAY - {SerieNumero}*%0A" +
+                         $"*Total: S/ {TotalPagado:N2}*%0A" +
+                         $"¡Gracias por su compra!";
+
+        var url = $"https://wa.me/?text={mensaje}";
+        await Browser.Default.OpenAsync(url, BrowserLaunchMode.External);
+    }
+
 }

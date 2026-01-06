@@ -1,5 +1,6 @@
 ﻿@page "/"
 @layout AuthLayout
+@using DikePay.DTOs.Auth.Request
 @using DikePay.Models
 @using DikePay.Services.Interfaces
 @inject IAuthService AuthService
@@ -118,16 +119,6 @@
 
             if (success)
             {
-                
-                _ = Task.Run(async () =>
-                {
-                    try
-                    {
-                        await SyncService.SincronizarTodoAsync();
-                    }
-                    catch (Exception) { /* Loguear error de sync silencioso */ }
-                });
-
                 // 3. Navegamos al Dashboard
                 Navigation.NavigateTo("/dashboard");
             }

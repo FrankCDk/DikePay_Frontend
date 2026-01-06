@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace DikePay.Models
+namespace DikePay.DTOs.Auth.Request
 {
     public class LoginRequest
     {

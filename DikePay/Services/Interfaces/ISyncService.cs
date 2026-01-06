@@ -5,5 +5,7 @@
         Task SincronizarTodoAsync();
         bool EstaSincronizando { get; }
         double Progreso { get; }
+        event Action<string>? OnSyncCompleted;
+        event Action<string>? OnSyncError;
     }
 }

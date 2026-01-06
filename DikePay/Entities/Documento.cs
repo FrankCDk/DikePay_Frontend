@@ -1,7 +1,12 @@
-﻿namespace DikePay.Models.Facturacion
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace DikePay.Entities
 {
+
+    [Table("Documentos")] // Nombre de la tabla en SQLite
     public class Documento
     {
+        public string Cabecera { get; set; } = string.Empty;
         public string Agencia { get; set; } = string.Empty;
         public string Tipo { get; set; } = string.Empty;
         public string Serie { get; set; } = string.Empty;
@@ -13,5 +18,6 @@
         public string Estado { get; set; } = string.Empty;
         public string EstadoDocumento { get; set; } = string.Empty;
         public string EstadoSunat { get; set; } = string.Empty;
+        public bool EstaSincronizado { get; set; } = false;
     }
 }

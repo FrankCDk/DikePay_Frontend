@@ -1,4 +1,4 @@
-﻿namespace DikePay.Models.DTOs.Auth
+﻿namespace DikePay.DTOs.Auth.Response
 {
     public class LoginResponseDto
     {
@@ -6,11 +6,11 @@
         public bool Success { get; set; }
 
         // Estas deben ser IDENTICAS a las de UserResponse del Backend
-        public string Codigo { get; set; } = string.Empty;
-        public string Nombre { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
-        public string Rol { get; set; } = string.Empty;
-        public bool Estado { get; set; }
+        public string Role { get; set; } = string.Empty;
+        public bool State { get; set; }
         public string Token { get; set; } = string.Empty;
     }
 }

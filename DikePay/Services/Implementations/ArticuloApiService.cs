@@ -1,5 +1,5 @@
 ﻿using System.Net.Http.Json;
-using DikePay.Models.DTOs.Articulos;
+using DikePay.DTOs.Articulos.Response;
 using DikePay.Services.Interfaces;
 
 namespace DikePay.Services.Implementations
@@ -16,7 +16,7 @@ namespace DikePay.Services.Implementations
 
         public async Task<List<ArticuloDto>> GetArticulosFromApiAsync()
         {
-            return await _httpClient.GetFromJsonAsync<List<ArticuloDto>>("api/articulos")
+            return await _httpClient.GetFromJsonAsync<List<ArticuloDto>>("products")
                    ?? new();
         }
     }

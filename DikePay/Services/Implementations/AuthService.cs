@@ -1,7 +1,7 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
+using DikePay.DTOs.Auth.Response;
 using DikePay.Models.Auth;
-using DikePay.Models.DTOs.Auth;
 using DikePay.Services.Interfaces;
 using DikePay.State;
 
@@ -41,7 +41,7 @@ namespace DikePay.Services.Implementations
                 var loginRequest = new { Email = user, Password = password };
 
                 // 2. Realizamos la llamada POST a tu API configurada en MauiProgram
-                var response = await _httpClient.PostAsJsonAsync("api/auth/login", loginRequest);
+                var response = await _httpClient.PostAsJsonAsync("auth", loginRequest);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -66,7 +66,7 @@ namespace DikePay.Services.Implementations
             catch (Exception ex)
             {
                 // Como Senior te digo: loguea esto en consola para depurar
-                Console.WriteLine($"Error en LoginOnline: {ex.Message}");
+               Console.WriteLine($"Error en LoginOnline: {ex.Message}");
             }
             return false;
         }
@@ -95,10 +95,10 @@ namespace DikePay.Services.Implementations
             _appState.EstablecerSesion(new SesionUsuario
             {
                 // Actualizamos a los nuevos nombres de propiedades
-                NombreCompleto = data.Nombre,
+                NombreCompleto = data.Name,
                 Token = data.Token,
-                Rol = data.Rol,
-                CodigoUsuario = data.Codigo,
+                Rol = data.Role,
+                CodigoUsuario = data.Code,
                 Email = data.Email,
             });
         }
