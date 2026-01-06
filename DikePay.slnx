@@ -1,4 +1,8 @@
 <Solution>
+  <Project Path="DikePay.Application/DikePay.Application.csproj" Id="eec7aa43-5bb7-48b4-a3ca-7cd7f0fedbd4" />
+  <Project Path="DikePay.Domain/DikePay.Domain.csproj" Id="abbb2502-4afd-4f15-9fd9-bdd8f8ceab61" />
+  <Project Path="DikePay.Infrastructure/DikePay.Infrastructure.csproj" Id="1155f754-887d-45f6-8567-8e653938ab53" />
+  <Project Path="DikePay.Shared/DikePay.Shared.csproj" Id="c8e2d254-bec0-421d-8a71-4a1197960a77" />
   <Project Path="DikePay/DikePay.csproj">
     <Deploy />
   </Project>

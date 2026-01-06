@@ -2,7 +2,7 @@
 @using Microsoft.Maui.ApplicationModel @* Necesario para Browser.OpenAsync *@
 @using Microsoft.Maui.Storage @* Para FileSystem *@
 @using Microsoft.Maui.ApplicationModel.DataTransfer @* Para Share *@
-@using DikePay.Services.Interfaces
+@using DikePay.Application.Interfaces.Services
 @inject ISnackbar Snackbar
 @inject IPdfService PdfService
 
@@ -120,7 +120,7 @@
     {
         try
         {
-            await PdfService.GenerarYCompartirAsync(SerieNumero, TotalPagado, ProductosVendidos);
+            await PdfService.GenerarYImprimirAsync(SerieNumero, TotalPagado, ProductosVendidos);
             Snackbar.Add("Seleccione 'Guardar como PDF' para enviar por WhatsApp", Severity.Info);
         }
         catch (Exception ex)

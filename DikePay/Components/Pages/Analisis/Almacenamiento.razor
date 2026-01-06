@@ -1,48 +1,83 @@
 ﻿@page "/almacenamiento"
-@using DikePay.Services.Interfaces
+@using DikePay.Application.Interfaces.Services
 @inject IAlmacenamientoService DbService
 @using MudBlazor
 
-<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
-    <MudText Typo="Typo.h5" GutterBottom="true">Estado del Sistema</MudText>
-    <MudText Typo="Typo.body2" Class="mb-6">Monitorea tu consumo de recursos y límites de tu plan actual.</MudText>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-8 mb-10">
+    <MudText Typo="Typo.h4" Color="Color.Primary"><b>DikePay</b> - Centro de Control de Datos</MudText>
+    <MudText Typo="Typo.body2" Class="mb-6" Color="Color.Secondary">Monitoreo de almacenamiento local y límites de emisión de documentos.</MudText>
 
     <MudGrid>
-        @* Card de Comprobantes *@
-        <MudItem xs="12">
-            <MudPaper Elevation="2" Class="pa-4">
-                <div class="d-flex align-center mb-2">
-                    <MudIcon Icon="@Icons.Material.Filled.Description" Color="Color.Primary" Class="mr-2" />
-                    <MudText Typo="Typo.h6">Comprobantes</MudText>
+        @* Card Principal de Capacidad Total *@
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="4" Class="pa-6" Style="height: 100%; border-top: 6px solid var(--mud-palette-primary);">
+                <div class="d-flex align-center mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.PieChart" Color="Color.Primary" Size="Size.Large" Class="mr-3" />
+                    <MudText Typo="Typo.h6">Capacidad de Emisión Global</MudText>
                 </div>
 
-                <div class="d-flex justify-space-between mb-1">
-                    <MudText Typo="Typo.body2">Límite de emisión</MudText>
-                    <MudText Typo="Typo.body2"><b>@conteoActual / @LimiteMaximo</b></MudText>
+                <div class="d-flex justify-space-between align-end mb-2">
+                    <MudText Typo="Typo.h3" Color="@GetColor(conteoActual, LimiteMaximo)"><b>@conteoActual</b></MudText>
+                    <MudText Typo="Typo.body1" Class="pb-1">de @LimiteMaximo docs</MudText>
                 </div>
 
                 <MudProgressLinear Color="@GetColor(conteoActual, LimiteMaximo)"
                                    Value="@porcentajeComprobantes"
                                    Size="Size.Large"
-                                   Class="my-3 rounded-lg" />
+                                   Class="my-4 rounded-lg" />
 
-                <MudText Typo="Typo.caption">
-                    @(LimiteMaximo - conteoActual) comprobantes restantes disponibles.
-                </MudText>
+                <MudAlert Severity="@(porcentajeComprobantes > 90 ? Severity.Error : Severity.Info)" Dense="true" Variant="Variant.Outlined">
+                    @(LimiteMaximo - conteoActual) espacios disponibles antes de sincronización obligatoria.
+                </MudAlert>
             </MudPaper>
         </MudItem>
 
-        @* Card de Base de Datos (Opcional pero muy Pro) *@
-        <MudItem xs="12">
-            <MudPaper Elevation="2" Class="pa-4" Style="border-left: 4px solid var(--mud-palette-secondary);">
-                <div class="d-flex align-center mb-2">
-                    <MudIcon Icon="@Icons.Material.Filled.SdStorage" Color="Color.Secondary" Class="mr-2" />
-                    <MudText Typo="Typo.h6">Memoria Local</MudText>
+        @* Memoria Física *@
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="4" Class="pa-6" Style="height: 100%; border-top: 6px solid var(--mud-palette-secondary);">
+                <div class="d-flex align-center mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Secondary" Size="Size.Large" Class="mr-3" />
+                    <MudText Typo="Typo.h6">Base de Datos Local</MudText>
                 </div>
-                <MudText Typo="Typo.body2">Espacio ocupado en disco:</MudText>
-                <MudText Typo="Typo.h5"><b>@tamañoDbMB MB</b></MudText>
+                <MudText Typo="Typo.body2">Espacio en disco:</MudText>
+                <MudText Typo="Typo.h3" Class="my-2"><b>@tamañoDbMB</b> <small style="font-size: 0.5em">MB</small></MudText>
+                <MudDivider Class="my-4" />
+                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.DeleteSweep" Color="Color.Error" Size="Size.Small">Optimizar DB</MudButton>
             </MudPaper>
         </MudItem>
+
+        @* Desglose Detallado por Tipo *@
+        <MudItem xs="12">
+            <MudText Typo="Typo.h6" Class="mt-6 mb-4">Estado por Tipo de Comprobante</MudText>
+            <MudGrid>
+                @foreach (var doc in documentosDetalle)
+                {
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudPaper Elevation="2" Class="pa-4">
+                            <div class="d-flex align-center justify-space-between mb-2">
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@doc.Icono" Color="@doc.Color" Class="mr-2" Size="Size.Small" />
+                                    <MudText Typo="Typo.subtitle2">@doc.Nombre</MudText>
+                                </div>
+                                <MudText Typo="Typo.caption">@doc.Cantidad / @doc.Limite</MudText>
+                            </div>
+
+                            <MudProgressLinear Color="@GetColor(doc.Cantidad, doc.Limite)"
+                                               Value="@doc.Porcentaje"
+                                               Size="Size.Medium"
+                                               Class="rounded-sm" />
+
+                            <div class="d-flex justify-end mt-1">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @doc.Restantes disponibles
+                                </MudText>
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudItem>
+        
     </MudGrid>
 </MudContainer>
 
@@ -52,19 +87,48 @@
     private double porcentajeComprobantes => (double)conteoActual / LimiteMaximo * 100;
     private string tamañoDbMB = "0.00";
 
+    // Clase auxiliar para la UI
+    private class DocInfo
+    {
+        public string Nombre { get; set; } = "";
+        public int Cantidad { get; set; }
+        public int Limite { get; set; } // Límite individual
+        public string Icono { get; set; } = "";
+        public Color Color { get; set; }
+
+        // Lógica calculada para no ensuciar el HTML
+        public double Porcentaje => (double)Cantidad / Limite * 100;
+        public int Restantes => Limite - Cantidad;
+    }
+
+    private List<DocInfo> documentosDetalle = new();
+
     protected override async Task OnInitializedAsync()
     {
         conteoActual = await DbService.ObtenerConteoComprobantesAsync();
+        tamañoDbMB = await DbService.ObtenerTamañoArchivoDb();
 
-        // Bonus Senior: Obtener el tamaño real del archivo .db3
-        try {
+        // Simulación de carga de datos (Aquí conectarías con ObtenerConteoPorTiposAsync)
+        CargarDatosSimulados();
+    }
 
-            tamañoDbMB = await DbService.ObtenerTamañoArchivoDb();
+    private void CargarDatosSimulados()
+    {
+        // Tip Senior: En el futuro, estos límites vendrían de 'ConfiguracionService'
+        int limiteEstandar = 500;
+        int limiteInterno = 1000;
 
-        } catch
+        documentosDetalle = new List<DocInfo>
         {
-            tamañoDbMB = "0.00";
-        }
+            new() { Nombre = "Facturas", Cantidad = 120, Limite = limiteEstandar, Icono = Icons.Material.Filled.ReceiptLong, Color = Color.Info },
+            new() { Nombre = "Boletas", Cantidad = 480, Limite = limiteEstandar, Icono = Icons.Material.Filled.ConfirmationNumber, Color = Color.Success },
+            new() { Nombre = "Notas Crédito", Cantidad = 5, Limite = 100, Icono = Icons.Material.Filled.RemoveCircle, Color = Color.Warning },
+            new() { Nombre = "Comandas", Cantidad = 850, Limite = 2000, Icono = Icons.Material.Filled.Restaurant, Color = Color.Secondary },
+            new() { Nombre = "Guías de Remisión", Cantidad = 12, Limite = 50, Icono = Icons.Material.Filled.LocalShipping, Color = Color.Primary },
+            new() { Nombre = "Partes Entrada", Cantidad = 20, Limite = 300, Icono = Icons.Material.Filled.Login, Color = Color.Success },
+            new() { Nombre = "Partes Salida", Cantidad = 18, Limite = 300, Icono = Icons.Material.Filled.Logout, Color = Color.Error },
+            new() { Nombre = "Bajas (Anulaciones)", Cantidad = 45, Limite = 50, Icono = Icons.Material.Filled.DeleteForever, Color = Color.Dark }
+        };
     }
 
     private Color GetColor(int actual, int max)
@@ -72,6 +136,6 @@
         double p = (double)actual / max * 100;
         if (p >= 90) return Color.Error;
         if (p >= 70) return Color.Warning;
-        return Color.Success;
+        return Color.Primary;
     }
 }

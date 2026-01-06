@@ -90,6 +90,11 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\DikePay.Application\DikePay.Application.csproj" />
+      <ProjectReference Include="..\DikePay.Infrastructure\DikePay.Infrastructure.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
       <MauiXaml Update="Components\Pages\ScannerPage.xaml">
         <Generator>MSBuild:Compile</Generator>
       </MauiXaml>

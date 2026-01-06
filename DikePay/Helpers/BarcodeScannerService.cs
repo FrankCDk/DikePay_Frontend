@@ -7,7 +7,7 @@ namespace DikePay.Helpers
         public async Task<string?> ScanAsync()
         {
             var page = new ScannerPage();
-            await Application.Current.MainPage.Navigation.PushModalAsync(page);
+            await Microsoft.Maui.Controls.Application.Current.MainPage.Navigation.PushModalAsync(page);
             return await page.Result.Task;
         }
     }

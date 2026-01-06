@@ -1,0 +1,12 @@
+﻿namespace DikePay.Shared.State
+{
+    public class SesionUsuario
+    {
+        public string CodigoUsuario { get; set; } = string.Empty;
+        public string NombreCompleto { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Rol { get; set; } = string.Empty;
+        public string Token { get; set; } = string.Empty;
+        public DateTime FechaExpiracion { get; set; }
+    }
+}

@@ -1,8 +1,7 @@
 ﻿@page "/"
 @layout AuthLayout
-@using DikePay.DTOs.Auth.Request
-@using DikePay.Models
-@using DikePay.Services.Interfaces
+@using DikePay.Application.DTOs.Auth.Request
+@using DikePay.Application.Interfaces.Services
 @inject IAuthService AuthService
 @inject ISyncService SyncService
 @inject ISnackbar Snackbar
