@@ -1,8 +1,10 @@
-﻿namespace DikePay.Application.Services
+﻿using DikePay.Application.DTOs.Impresion;
+
+namespace DikePay.Application.Services
 {
     public static class HtmlGenerator
     {
-        public static string ObtenerTicketHtml(string serie, decimal total, List<dynamic> productos)
+        public static string ObtenerTicketHtml(string serie, decimal total, List<TicketItemDto> productos)
         {
             var filas = string.Join("", productos.Select(p =>
                 $"<tr><td>{p.Cantidad} x {p.Nombre}</td><td style='text-align:right'>S/ {p.Precio * p.Cantidad:N2}</td></tr>"));

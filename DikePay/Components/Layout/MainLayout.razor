@@ -176,6 +176,8 @@
 </MudLayout>
 
 @code {
+
+    [Inject] private ISnackbar Snackbar { get; set; }
     bool _drawerOpen = true;
     private bool _isMobile;
     private string _layoutClass = "";
@@ -196,6 +198,13 @@
 
     protected override void OnInitialized()
     {
+
+        Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomRight;
+        Snackbar.Configuration.PreventDuplicates = true;
+        Snackbar.Configuration.NewestOnTop = true;
+        Snackbar.Configuration.VisibleStateDuration = 1000; // Aquí lo dejas fijo
+
+
         // Detectamos si es móvil una sola vez al iniciar
         _isMobile = DeviceInfo.Current.Platform != DevicePlatform.WinUI &&
                     DeviceInfo.Current.Platform != DevicePlatform.MacCatalyst;

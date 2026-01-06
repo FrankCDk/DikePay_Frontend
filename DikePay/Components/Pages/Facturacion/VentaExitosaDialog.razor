@@ -3,6 +3,7 @@
 @using Microsoft.Maui.Storage @* Para FileSystem *@
 @using Microsoft.Maui.ApplicationModel.DataTransfer @* Para Share *@
 @using DikePay.Application.Interfaces.Services
+@using DikePay.Application.DTOs.Impresion
 @inject ISnackbar Snackbar
 @inject IPdfService PdfService
 
@@ -111,7 +112,7 @@
     [Parameter] public decimal TotalPagado { get; set; }
     [Parameter] public decimal Descuento { get; set; }
     [Parameter] public string MetodoPago { get; set; } = "CONTADO";
-    [Parameter] public List<dynamic> ProductosVendidos { get; set; } = new();
+    [Parameter] public List<TicketItemDto> ProductosVendidos { get; set; } = new();
 
     private void Cerrar() => MudDialog.Close(DialogResult.Ok(true));
 

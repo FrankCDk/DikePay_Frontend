@@ -1,0 +1,143 @@
+﻿@using MudBlazor
+
+<style>
+    .mud-stepper-actions {
+        display: none !important;
+    }
+</style>
+
+<MudDialog>
+    <DialogContent>
+        <MudPaper Class="pa-4" Style="min-width:420px">
+
+            <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
+                Procesando comprobante
+            </MudText>
+
+            <MudStepper Vertical HideActions="true" @bind-ActiveIndex="_activeStep">
+
+                <MudStep Title="Generando factura"
+                         Completed="@IsCompleted(0)"
+                         CompletedIcon="@Icons.Material.Filled.CheckCircle"
+                         SecondaryText="@GetStatusText(0)">
+                    <MudText Typo="Typo.body2">
+                        Registrando la venta y generando el comprobante.
+                    </MudText>
+                </MudStep>
+
+                <MudStep Title="Generación de XML"
+                         Completed="@IsCompleted(1)"
+                         CompletedIcon="@Icons.Material.Filled.CheckCircle"
+                         SecondaryText="@GetStatusText(1)">
+                    <MudText Typo="Typo.body2">
+                        Creando el XML electrónico.
+                    </MudText>
+                </MudStep>
+
+                <MudStep Title="Declaración OSE / SUNAT"
+                         Completed="@IsCompleted(2)"
+                         CompletedIcon="@Icons.Material.Filled.CheckCircle"
+                         SecondaryText="@GetStatusText(2)">
+                    <MudText Typo="Typo.body2">
+                        Enviando a OSE / SUNAT.
+                    </MudText>
+                </MudStep>
+
+                <MudStep Title="Publicación"
+                         Completed="@IsCompleted(3)"
+                         CompletedIcon="@Icons.Material.Filled.CheckCircle"
+                         SecondaryText="@GetStatusText(3)">
+                    <MudText Typo="Typo.body2">
+                        Publicando comprobante.
+                    </MudText>
+                </MudStep>
+
+            </MudStepper>
+
+            @if (_procesoCompleto)
+            {
+                <MudDivider Class="my-4" />
+
+                <MudButton Color="Color.Primary"
+                           Variant="Variant.Filled"
+                           FullWidth
+                           StartIcon="@Icons.Material.Filled.ReceiptLong"
+                           OnClick="VerTicket">
+                    Ver impresión en formato ticket
+                </MudButton>
+            }
+
+        </MudPaper>
+    </DialogContent>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private int _activeStep = 0;
+    private bool _procesoCompleto = false;
+
+    private readonly StepStatus[] _steps =
+    {
+        StepStatus.Pending,
+        StepStatus.Pending,
+        StepStatus.Pending,
+        StepStatus.Pending
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await EjecutarProceso();
+    }
+
+    private async Task EjecutarProceso()
+    {
+        for (int i = 0; i < _steps.Length; i++)
+        {
+            _activeStep = i;
+            _steps[i] = StepStatus.Processing;
+            StateHasChanged();
+
+            await Task.Delay(1500); // aquí va tu lógica real
+
+            _steps[i] = StepStatus.Success;
+            StateHasChanged();
+
+            await Task.Delay(300);
+
+            if (i < _steps.Length - 1)
+                _activeStep = i + 1;
+        }
+
+        _procesoCompleto = true;
+        StateHasChanged();
+    }
+
+    private void VerTicket()
+    {
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private bool IsCompleted(int index)
+        => _steps[index] == StepStatus.Success;
+
+    private string GetStatusText(int index)
+        => _steps[index] switch
+        {
+            StepStatus.Pending => "Pendiente",
+            StepStatus.Processing => "Generando...",
+            StepStatus.Success => "Completado",
+            StepStatus.Error => "Error",
+            _ => ""
+        };
+
+    private enum StepStatus
+    {
+        Pending,
+        Processing,
+        Success,
+        Error
+    }
+}

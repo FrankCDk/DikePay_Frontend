@@ -1,0 +1,208 @@
+﻿@page "/restaurante/toma-comanda"
+@using DikePay.Application.DTOs.Comandas
+@using DikePay.Application.Interfaces.Repositories
+@using DikePay.Domain.Enums
+@using DikePay.Domain.Entities
+@inject IComandaRepository ComandaService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    
+    @* --- CABECERA DE SELECCIÓN DE SERVICIO --- *@
+    <MudPaper Elevation="0" Class="pa-4 mb-4 d-flex align-center justify-space-between" Style="background: transparent;">
+        <MudText Typo="Typo.h5"><b>@tituloVista</b></MudText>
+        
+        <MudToggleGroup T="TipoServicio" @bind-Value="tipoSeleccionado" Outline="true" Delimiters="true" Color="Color.Primary" SelectionMode="SelectionMode.SingleSelection">
+            <MudToggleItem Value="@TipoServicio.Local" Text="LOCAL" />
+            <MudToggleItem Value="@TipoServicio.ParaLlevar" Text="PARA LLEVAR" />
+            <MudToggleItem Value="@TipoServicio.Delivery" Text="DELIVERY" />
+        </MudToggleGroup>
+    </MudPaper>
+
+    @if (tipoSeleccionado == TipoServicio.Local && mesaSeleccionada == null)
+    {
+        @* --- VISTA DE SELECCIÓN DE MESAS --- *@
+        <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+            @foreach (AreaRestaurante area in Enum.GetValues(typeof(AreaRestaurante)))
+            {
+                <MudTabPanel Text="@area.ToString().ToUpper()">
+                    <MudGrid>
+                        @foreach (var mesa in mesas.Where(m => m.Area == area))
+                        {
+                            <MudItem xs="4" sm="3" md="2">
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="@(mesa.EstaOcupada ? Color.Error : Color.Default)"
+                                           OnClick="@(() => SeleccionarMesa(mesa))"
+                                           Style="height:100px; width:100%;"
+                                           Class="rounded-lg shadow-sm">
+                                    <div class="d-flex flex-column">
+                                        <MudIcon Icon="@Icons.Material.Filled.TableBar" Class="mb-1"/>
+                                        <MudText>MESA @mesa.Numero</MudText>
+                                    </div>
+                                </MudButton>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudTabPanel>
+            }
+        </MudTabs>
+    }
+    else
+    {
+        @* --- VISTA DE TOMA DE PEDIDO (Carrito) --- *@
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="8">
+                <MudPaper Elevation="2" Class="pa-4">
+                    <div class="d-flex align-center mb-4">
+                        @if (tipoSeleccionado == TipoServicio.Local)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" OnClick="RegresarAMesas" />
+                        }
+                        <MudText Typo="Typo.h6">Menú de Platos</MudText>
+                    </div>
+
+                    <MudTabs Elevation="0" Rounded="true" Color="Color.Secondary" Class="mb-4">
+                        <MudTabPanel Text="Entradas" />
+                        <MudTabPanel Text="Fondos" />
+                        <MudTabPanel Text="Bebidas" />
+                        <MudTabPanel Text="Postres" />
+                    </MudTabs>
+
+                    <div style="height: 60vh; overflow-y: auto;">
+                        <MudGrid>
+                            @foreach (var prod in productosSimulados)
+                            {
+                                <MudItem xs="6" sm="4" lg="3">
+                                    <MudCard Outlined="true" @onclick="@(() => AgregarAlCarrito(prod))" Style="cursor:pointer; height: 100%; transition: 0.3s;" Class="hover-card">
+                                        <MudCardContent Class="pa-3">
+                                            <MudText Typo="Typo.subtitle2" Style="height: 40px; overflow: hidden;"><b>@prod.Nombre</b></MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Primary" Class="mt-2">@prod.Precio.ToString("C2")</MudText>
+                                        </MudCardContent>
+                                    </MudCard>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    </div>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="4">
+                <MudPaper Elevation="4" Class="pa-4 d-flex flex-column" Style="height: 75vh;">
+                    <div class="mb-4">
+                        <MudText Typo="Typo.h6">Detalle: @referencia</MudText>
+                        <MudChip T="string" Color="Color.Info" Size="Size.Small">@tipoSeleccionado</MudChip>
+                    </div>
+
+                    <div class="flex-grow-1" style="overflow-y: auto;">
+                        @if (!carrito.Any())
+                        {
+                            <div class="d-flex flex-column align-center mt-10" style="opacity: 0.5;">
+                                <MudIcon Icon="@Icons.Material.Filled.ShoppingBasket" Size="Size.Large" />
+                                <MudText>Carrito vacío</MudText>
+                            </div>
+                        }
+                        <MudList T="string">
+                            @foreach (var item in carrito)
+                            {
+                                <MudListItem>
+                                    <div class="d-flex justify-space-between align-center">
+                                        <div style="width: 70%">
+                                            <MudText Typo="Typo.body2"><b>@item.Cantidad x</b> @item.Nombre</MudText>
+                                            <MudText Typo="Typo.caption">@item.Subtotal.ToString("C2")</MudText>
+                                        </div>
+                                        <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline" Color="Color.Error" Size="Size.Small" OnClick="@(() => QuitarDelCarrito(item))" />
+                                    </div>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </div>
+
+                    <MudDivider Class="my-4" />
+                    <div class="d-flex justify-space-between mb-4">
+                        <MudText Typo="Typo.h5">TOTAL</MudText>
+                        <MudText Typo="Typo.h5"><b>@carrito.Sum(x => x.Subtotal).ToString("C2")</b></MudText>
+                    </div>
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth="true" Size="Size.Large" 
+                               Disabled="@(!carrito.Any())" OnClick="ConfirmarComanda">
+                        ENVIAR COMANDA
+                    </MudButton>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+<style>
+    .hover-card:hover { transform: translateY(-5px); border: 1px solid var(--mud-palette-primary); }
+</style>
+
+@code {
+    private TipoServicio tipoSeleccionado = TipoServicio.Local;
+    private Mesa mesaSeleccionada = null;
+    private string referencia => tipoSeleccionado == TipoServicio.Local ? $"Mesa {mesaSeleccionada?.Numero}" : "Cliente General";
+    private string tituloVista => mesaSeleccionada == null && tipoSeleccionado == TipoServicio.Local ? "Selección de Mesa" : "Tomar Pedido";
+
+    private List<CartItemDto> carrito = new();
+    private List<Mesa> mesas = new();
+    private List<Articulo> productosSimulados = new();
+
+    protected override void OnInitialized()
+    {
+        GenerarMesas();
+        Generar20Productos();
+    }
+
+    private void GenerarMesas()
+    {
+        for (int i = 1; i <= 12; i++) mesas.Add(new Mesa { Numero = i, Area = AreaRestaurante.Salon, EstaOcupada = i % 5 == 0 });
+        for (int i = 13; i <= 18; i++) mesas.Add(new Mesa { Numero = i, Area = AreaRestaurante.Piscina });
+        for (int i = 19; i <= 24; i++) mesas.Add(new Mesa { Numero = i, Area = AreaRestaurante.Bar });
+    }
+
+    private void Generar20Productos()
+    {
+        string[] nombres = { 
+            "Ceviche Mixto", "Lomo Saltado", "Ají de Gallina", "Arroz con Pollo", "Anticuchos", 
+            "Papas a la Huancaína", "Causa Limeña", "Tacu Tacu", "Seco de Res", "Arroz Chaufa",
+            "Inca Kola 1.5L", "Pisco Sour", "Chicha Morada", "Limonada Hierbaluisa", "Cerveza Cusqueña",
+            "Suspiro a la Limeña", "Picarones", "Arroz con Leche", "Helado de Lúcuma", "Mazamorra Morada"
+        };
+        
+        Random r = new();
+        for(int i = 0; i < nombres.Length; i++)
+        {
+            productosSimulados.Add(new Articulo { Id = $"P{i}", Nombre = nombres[i], Precio = r.Next(15, 60) });
+        }
+    }
+
+    private void SeleccionarMesa(Mesa mesa) => mesaSeleccionada = mesa;
+    private void RegresarAMesas() => mesaSeleccionada = null;
+
+    private void AgregarAlCarrito(Articulo articulo)
+    {
+        var existente = carrito.FirstOrDefault(x => x.ArticuloId == articulo.Id);
+        if (existente != null) existente.Cantidad++;
+        else carrito.Add(new CartItemDto { ArticuloId = articulo.Id, Nombre = articulo.Nombre, Precio = articulo.Precio, Cantidad = 1 });
+        Snackbar.Add($"{articulo.Nombre} añadido", Severity.Info, config => { 
+            config.VisibleStateDuration = 1000; 
+        });
+    }
+
+    private void QuitarDelCarrito(CartItemDto item)
+    {
+        if (item.Cantidad > 1) item.Cantidad--;
+        else carrito.Remove(item);
+    }
+
+    private async Task ConfirmarComanda()
+    {
+        var id = await ComandaService.GuardarComandaAsync(tipoSeleccionado, referencia, carrito);
+        if (id > 0)
+        {
+            Snackbar.Add("Comanda enviada a cocina", Severity.Success);
+            carrito.Clear();
+            mesaSeleccionada = null;
+        }
+    }
+}

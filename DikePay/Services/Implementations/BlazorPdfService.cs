@@ -1,4 +1,5 @@
-﻿using DikePay.Application.Interfaces.Services;
+﻿using DikePay.Application.DTOs.Impresion;
+using DikePay.Application.Interfaces.Services;
 using DikePay.Application.Services;
 using Microsoft.JSInterop;
 
@@ -9,7 +10,7 @@ namespace DikePay.Services.Implementations
         private readonly IJSRuntime _js;
         public BlazorPdfService(IJSRuntime js) => _js = js;
 
-        public async Task GenerarYImprimirAsync(string serie, decimal total, List<dynamic> productos)
+        public async Task GenerarYImprimirAsync(string serie, decimal total, List<TicketItemDto> productos)
         {
             var html = HtmlGenerator.ObtenerTicketHtml(serie, total, productos);
             var htmlSafe = System.Text.Json.JsonSerializer.Serialize(html);
