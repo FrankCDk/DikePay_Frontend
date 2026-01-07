@@ -25,18 +25,36 @@ namespace DikePay.Infrastructure.Repositories
             var db = await _context.GetConnectionAsync();
             int result = 0;
 
-            // RunInTransactionAsync espera una Action<SQLiteConnection>
-            // NO uses 'async' en el delegado de adentro
-            await db.RunInTransactionAsync((SQLiteConnection conn) =>
-            {
-                // Al ser una conexión síncrona (conn), las operaciones son directas
-                foreach (var articulo in articulos)
-                {
-                    result += conn.InsertOrReplace(articulo);
-                }
-            });
+            //// RunInTransactionAsync espera una Action<SQLiteConnection>
+            //// NO uses 'async' en el delegado de adentro
+            //await db.RunInTransactionAsync((SQLiteConnection conn) =>
+            //{
+            //    // Al ser una conexión síncrona (conn), las operaciones son directas
+            //    foreach (var articulo in articulos)
+            //    {
+            //        result += conn.InsertOrReplace(articulo);
+            //    }
+            //});
 
-            return result;
+            //return result;
+            try
+            {
+                await db.RunInTransactionAsync((SQLiteConnection conn) =>
+                {
+                    foreach (var articulo in articulos)
+                    {
+                        // InsertOrReplace es pesado. Si sabes que son nuevos, usa Insert.
+                        result += conn.InsertOrReplace(articulo);
+                    }
+                });
+                return result;
+            }
+            catch (SQLiteException ex) when (ex.Message.Contains("locked"))
+            {
+                // Log específico para debugging profesional
+                Console.WriteLine("DB bloqueada. Reintentando...");
+                throw;
+            }
         }
 
         public async Task<Articulo> GetBySkuAsync(string sku)

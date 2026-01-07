@@ -2,10 +2,13 @@
 @layout AuthLayout
 @using DikePay.Application.DTOs.Auth.Request
 @using DikePay.Application.Interfaces.Services
+@using CommunityToolkit.Mvvm.Messaging
+@using DikePay.Services.Implementations
 @inject IAuthService AuthService
 @inject ISyncService SyncService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@implements IDisposable
 
 <MudContainer MaxWidth="MaxWidth.Small">
     @* Usamos EditForm para manejar la validación automáticamente *@
@@ -59,6 +62,15 @@
                     {
                         <MudText>INGRESAR</MudText>
                     }
+                </MudButton>
+
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Secondary"
+                           FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.QrCodeScanner"
+                           OnClick="IrAEscaner"
+                           Style="height:50px;">
+                    INGRESAR CON QR
                 </MudButton>
 
                 @* SEPARADOR VISUAL (Nivel Senior) *@
@@ -140,5 +152,66 @@
     {
         // En un futuro, aquí llamarías a tu servicio de OAuth2
         Snackbar.Add("El inicio de sesión con Google estará disponible pronto.", Severity.Info);
+    }
+
+    protected override void OnInitialized()
+    {
+        // Nos registramos para recibir mensajes de tipo QrLoginMessage
+        WeakReferenceMessenger.Default.Register<QrLoginMessage>(this, (r, m) =>
+        {
+            // El valor del QR está en m.Value
+            InvokeAsync(async () => 
+            {
+                await ProcesarResultadoQr(m.Value);
+                StateHasChanged();
+            });
+        });
+    }
+
+    private async Task IrAEscaner()
+    {
+        try
+        {
+            // Verificamos permisos antes de saltar a la página nativa
+            var status = await Permissions.RequestAsync<Permissions.Camera>();
+            if (status != PermissionStatus.Granted)
+            {
+                Snackbar.Add("Se requiere permiso de cámara para esta función", Severity.Warning);
+                return;
+            }
+
+            // Navegación Nativa usando Shell
+            await Shell.Current.GoToAsync("login-scanner");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error al abrir el escáner: " + ex.Message, Severity.Error);
+        }
+    }
+
+    private async Task ProcesarResultadoQr(string contenido)
+    {
+        // El contenido viene como "email|password"
+        var datos = contenido.Split('|');
+        if (datos.Length == 2)
+        {
+            _model.Email = datos[0];
+            _model.Password = datos[1];
+
+            // Forzamos a Blazor a refrescar la UI con los nuevos datos
+            StateHasChanged();
+
+            // Ejecutamos el login automáticamente
+            await OnValidSubmit();
+        }
+        else
+        {
+            Snackbar.Add("Código QR no válido para inicio de sesión", Severity.Error);
+        }
+    }
+
+    public void Dispose()
+    {
+        WeakReferenceMessenger.Default.Unregister<QrLoginMessage>(this);
     }
 }

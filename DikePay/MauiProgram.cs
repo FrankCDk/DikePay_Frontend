@@ -2,6 +2,7 @@
 using DikePay.Extensions;
 using DikePay.Helpers;
 using DikePay.Infrastructure.Extensions;
+using DikePay.Services.Implementations;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 using MudBlazor.Services;
@@ -38,6 +39,7 @@ namespace DikePay
             });
 
             builder.Services.AddSingleton<BarcodeScannerService>();
+            builder.Services.AddSingleton<EscPosPrintService>();
             builder.Services.AddMauiBlazorWebView();
             builder.Services.AddApiServices();
             builder.Services.AddApplication();

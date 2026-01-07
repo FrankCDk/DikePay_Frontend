@@ -35,7 +35,6 @@ namespace DikePay.Application.Services
             try
             {
                 EstaSincronizando = true;
-                // Invocamos en el hilo principal para que la UI se entere del inicio
                 _appState.NotifyStateChanged();
 
                 var articulosDto = await _api.GetArticulosFromApiAsync();

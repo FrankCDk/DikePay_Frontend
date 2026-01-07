@@ -1,0 +1,42 @@
+﻿@page "/configuracion/acceso"
+@using DikePay.Application.Interfaces.Maui
+@using DikePay.Application.Interfaces.Services
+@inject IQrService QrService
+@inject IAuthService AuthService
+
+<MudText Typo="Typo.h5">Acceso Dispositivo Móvil</MudText>
+<MudPaper Class="pa-4 mt-4" Elevation="2">
+    <MudStack AlignItems="AlignItems.Center">
+        <MudText>Escanea este código desde otro celular para iniciar sesión instantáneamente.</MudText>
+        
+        @if (string.IsNullOrEmpty(_qrSvg))
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GenerarTokenAcceso">
+                Generar Código de Acceso
+            </MudButton>
+        }
+        else
+        {
+            <div style="width: 250px; background: white; padding: 15px; border-radius: 8px;">
+                @((MarkupString)_qrSvg)
+            </div>
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-2">
+                Este código expira en 5 minutos.
+            </MudAlert>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    private string _qrSvg;
+
+    private void GenerarTokenAcceso()
+    {
+        // En un caso real, aquí pedirías al servidor un "ShortLivedToken"
+        // Para la prueba, usaremos un string con formato: "USUARIO|PASSWORD"
+        var datos = "admin@dikepay.com|Admin123*";
+        
+        // El servicio de QR que creamos antes
+        _qrSvg = QrService.GenerarQrBase64(datos);
+    }
+}

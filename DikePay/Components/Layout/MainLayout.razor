@@ -1,11 +1,13 @@
 ﻿@inherits LayoutComponentBase
 @using DikePay.Application.Interfaces.Services
+@using DikePay.Application.Interfaces
 @using DikePay.Shared.State
 @using Microsoft.Maui.Devices
 @inject NavigationManager Navigation
 @inject ISyncService SyncService
 @inject IAuthService AuthService
 @inject ISyncWorkerService SyncWorker
+@inject INetworkService ConnectivityService
 @implements IDisposable
 @inject AppState AppStateInstance
 @inject MudBlazor.ISnackbar SnackbarService
@@ -81,6 +83,10 @@
                              ToggledIcon="@Icons.Material.Filled.LightMode" ToggledColor="Color.Inherit"
                              Title="Cambiar modo" />
 
+        <MudBadge Dot="true" Color="@(AppStateInstance.IsOnline? Color.Success: Color.Error)" Class="mx-2"> 
+            <MudIcon Icon="@Icons.Material.Outlined.Wifi" /> 
+        </MudBadge>
+
         @* Notificaciones *@
         <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" ActivationEvent="MouseEvent.LeftClick" PopoverClass="mud-popover-cascading"  >
             <ActivatorContent>
@@ -154,7 +160,7 @@
                     <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" Class="mt-1">@UsuarioRol</MudChip>
                 </div>
                 <MudDivider />
-                <MudMenuItem Icon="@Icons.Material.Outlined.Person">Mi Perfil</MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Outlined.Person" Href="/configuracion/acceso">Mi Perfil</MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Outlined.Security">Seguridad</MudMenuItem>
                 <MudDivider />
                 <MudMenuItem Icon="@Icons.Material.Outlined.Logout" Color="Color.Error" OnClick="CerrarSesion">Cerrar Sesión</MudMenuItem>
@@ -217,6 +223,9 @@
         SyncService.OnSyncCompleted += HandleSyncSuccess; // Suscripción al éxito de la sincronización
         SyncService.OnSyncError += HandleSyncError;
 
+        AppStateInstance.SetConnectivity(ConnectivityService.HasInternet); 
+        ConnectivityService.ConnectivityChanged += HandleConnectivityChanged;
+
         _ = Task.Run(async () =>
                 {
                     try
@@ -247,9 +256,21 @@
     public void Dispose()
     {
         AppStateInstance.OnChange -= HandleStateChanged;
+        ConnectivityService.ConnectivityChanged -= HandleConnectivityChanged;
         // ¡No olvides desuscribirte para evitar fugas de memoria!
         SyncService.OnSyncCompleted -= HandleSyncSuccess;
         SyncService.OnSyncError -= HandleSyncError;
+    }
+
+    private void HandleConnectivityChanged(bool isConnected) { 
+        InvokeAsync(() => { 
+            AppStateInstance.SetConnectivity(isConnected); 
+            SnackbarService.Add(
+                isConnected ? "Conectado a Internet" : "Sin conexión a Internet", 
+                isConnected ? Severity.Success : Severity.Warning, 
+                config => { config.VisibleStateDuration = 4000; }); 
+                StateHasChanged(); 
+        }); 
     }
 
     void DrawerToggle()

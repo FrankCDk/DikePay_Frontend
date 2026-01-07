@@ -32,10 +32,20 @@ namespace DikePay.Infrastructure.Persistence
 
                     // CREAMOS LAS OPCIONES DE CONEXIÓN
                     var options = new SQLiteConnectionString(dbPath,
-                        storeDateTimeAsTicks: false // <--- AQUÍ ESTÁ EL TRUCO
+                        storeDateTimeAsTicks: false, // <--- AQUÍ ESTÁ EL TRUCO
+                        openFlags: SQLiteOpenFlags.ReadWrite |
+                           SQLiteOpenFlags.Create |
+                           SQLiteOpenFlags.FullMutex
                     );
 
                     _connection = new SQLiteAsyncConnection(options);
+
+                    // CONFIGURACIONES PRO:
+                    // 1. Esperar hasta 2 segundos si la DB está ocupada antes de lanzar excepción
+                    await _connection.ExecuteScalarAsync<string>("PRAGMA busy_timeout = 2000;");
+
+                    // 2. Activar modo WAL para permitir lecturas y escrituras simultáneas
+                    await _connection.ExecuteScalarAsync<string>("PRAGMA journal_mode = WAL;");
                 }
 
                 if (!_isInitialized)
@@ -43,9 +53,9 @@ namespace DikePay.Infrastructure.Persistence
 
                     // --- AQUÍ VA TU LÓGICA DE TABLAS ---
                     // En Desarrollo puedes dejar el Drop, en producción COMENTALO.
-                    //await _connection.DropTableAsync<Articulo>();
-                    //await _connection.DropTableAsync<Documento>();
-                    //await _connection.DropTableAsync<Comanda>();
+                    await _connection.DropTableAsync<Articulo>();
+                    await _connection.DropTableAsync<Documento>();
+                    await _connection.DropTableAsync<Comanda>();
 
                     // Lógica de creación de tablas
                     await _connection.CreateTableAsync<Articulo>();

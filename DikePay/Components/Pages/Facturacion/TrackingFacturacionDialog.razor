@@ -1,4 +1,6 @@
 ﻿@using MudBlazor
+@using DikePay.Application.Interfaces
+@inject INetworkService ConnectivityService
 
 <style>
     .mud-stepper-actions {
@@ -65,6 +67,29 @@
                            OnClick="VerTicket">
                     Ver impresión en formato ticket
                 </MudButton>
+
+                <MudButton Color="Color.Secondary" Class="mt-3"
+                           Variant="Variant.Filled"
+                           FullWidth
+                           StartIcon="@Icons.Material.Filled.Close"
+                           OnClick="CerrarModal">
+                    Cerrar
+                </MudButton>
+            }
+
+            @if (_steps[2] == StepStatus.Error)
+            {
+                <MudAlert Severity="Severity.Error" Dense Variant="Variant.Filled" Class="mt-3">
+                    No hay conexión a Internet. No se pudo enviar el comprobante a SUNAT.
+                </MudAlert>
+
+                <MudButton Color="Color.Secondary" Class="mt-3"
+                           Variant="Variant.Filled"
+                           FullWidth
+                           StartIcon="@Icons.Material.Filled.Close"
+                           OnClick="CerrarModal">
+                    Cerrar
+                </MudButton>
             }
 
         </MudPaper>
@@ -101,6 +126,19 @@
             StateHasChanged();
 
             await Task.Delay(1500); // aquí va tu lógica real
+
+            // 🔴 VALIDACIÓN CRÍTICA EN PASO 3 (índice 2)
+            if (i == 2 && !ConnectivityService.HasInternet)
+            {
+                _steps[i] = StepStatus.Error;
+
+                // El paso 4 queda pendiente explícitamente
+                if (_steps.Length > 3)
+                    _steps[3] = StepStatus.Pending;
+
+                StateHasChanged();
+                return; // ⛔ Cortamos el flujo
+            }
 
             _steps[i] = StepStatus.Success;
             StateHasChanged();
@@ -139,5 +177,10 @@
         Processing,
         Success,
         Error
+    }
+
+    private void CerrarModal()
+    {
+        MudDialog.Cancel();
     }
 }

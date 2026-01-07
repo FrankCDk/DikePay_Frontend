@@ -5,6 +5,7 @@
         public SesionUsuario? UsuarioActivo { get; private set; }
 
         public event Action? OnChange;
+        public bool IsOnline { get; private set; } = true;
 
         public Task InicializarAppAsync()
         {
@@ -27,6 +28,14 @@
         public void NotifyStateChanged()
         {
             OnChange?.Invoke();
+        }
+
+        public void SetConnectivity(bool isOnline)
+        {
+            if (IsOnline == isOnline) return;
+
+            IsOnline = isOnline;
+            NotifyStateChanged();
         }
     }
 }
