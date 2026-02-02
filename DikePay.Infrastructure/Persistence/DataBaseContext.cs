@@ -53,10 +53,10 @@ namespace DikePay.Infrastructure.Persistence
 
                     // --- AQUÍ VA TU LÓGICA DE TABLAS ---
                     // En Desarrollo puedes dejar el Drop, en producción COMENTALO.
-                    await _connection.DropTableAsync<Articulo>();
+                    //await _connection.DropTableAsync<Articulo>();
                     //await _connection.DropTableAsync<Documento>();
                     //await _connection.DropTableAsync<Comanda>();
-                    await _connection.DropTableAsync<Promocion>();
+                    //await _connection.DropTableAsync<Promocion>();
 
                     // Lógica de creación de tablas
                     await _connection.CreateTableAsync<Articulo>();

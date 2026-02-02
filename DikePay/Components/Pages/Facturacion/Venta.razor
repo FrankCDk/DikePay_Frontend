@@ -209,31 +209,6 @@
         </MudTable>
     };
 
-//     RenderFragment RenderSeccionComprobante() => __builder => {
-//     <MudPaper Class="pa-2" Elevation="1"> @* Reducido de pa-4 a pa-2 *@
-//         <MudText Typo="Typo.caption" Class="mb-1" Style="font-weight: bold; color: gray;">DATOS DEL COMPROBANTE</MudText>
-//         <MudGrid Spacing="1" Class="ma-0"> @* Spacing mínimo *@
-//             <MudItem xs="12" Class="pa-1">
-//                 <MudToggleGroup T="string" @bind-Value="_tipoDoc" Delimiters="false" 
-//                                 Size="Size.Small" Class="mud-width-full custom-toggle-group">
-//                     <MudToggleItem Value="@("Boleta")" Text="Boleta" />
-//                     <MudToggleItem Value="@("Factura")" Text="Factura" />
-//                 </MudToggleGroup>
-//             </MudItem>
-//             <MudItem xs="5" Class="pa-1">
-//                 <MudSelect T="string" Label="Moneda" @bind-Value="_moneda" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
-//                     <MudSelectItem Value="@("PEN")">Soles</MudSelectItem>
-//                     <MudSelectItem Value="@("USD")">Dólares</MudSelectItem>
-//                 </MudSelect>
-//             </MudItem>
-//             <MudItem xs="7" Class="pa-1">
-//                  <MudAutocomplete T="string" Label="Cliente" @bind-Value="_clienteNombre" SearchFunc="@SearchClientes"
-//                                Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" />
-//             </MudItem>
-//         </MudGrid>
-//     </MudPaper>
-// };
-
 RenderFragment RenderSeccionComprobante() => __builder => {
     <MudPaper Class="pa-3" Elevation="1">
         <MudText Typo="Typo.caption" Class="mb-3 d-block" Style="font-weight: bold; color: gray; letter-spacing: 1px;">
@@ -539,12 +514,12 @@ RenderFragment RenderSeccionVenta() => __builder => {
         {
             CloseOnEscapeKey = true,
             CloseButton = true,
-            MaxWidth = MaxWidth.Small,
+            MaxWidth = MaxWidth.ExtraLarge,
             FullWidth = true,
             BackdropClick = false
         };
 
-        var dialogPago = await DialogService.ShowAsync<PagoDialog>("Finalizar Venta", parametersPago, optionsStandard);
+        var dialogPago = await DialogService.ShowAsync<PagoDialog>("Cobrar Venta", parametersPago, optionsStandard);
         var resultPago = await dialogPago.Result;
 
         // Si el usuario canceló el pago, nos detenemos aquí
@@ -588,18 +563,48 @@ RenderFragment RenderSeccionVenta() => __builder => {
     }
 
     // CORREGIDO: Ahora el método acepta la lista de productos preparada
+    // private async Task MostrarTicketExitoso(dynamic datos, List<TicketItemDto> productos)
+    // {
+    //     var parametersExito = new DialogParameters<VentaExitosaDialog>
+    //     {
+    //         { x => x.TotalPagado, (decimal)datos.TotalPagado },
+    //         { x => x.Descuento, (decimal)datos.Descuento },
+    //         { x => x.MetodoPago, (string)datos.Metodo },
+    //         { x => x.ProductosVendidos, productos }, 
+    //         { x => x.SerieNumero, $"B001-{DateTime.Now:mmssff}" } 
+    //     };
+
+    //     var options = new DialogOptions { CloseButton = false, MaxWidth = MaxWidth.Small, FullWidth = true };
+    //     await DialogService.ShowAsync<VentaExitosaDialog>("Comprobante", parametersExito, options);
+    // }
+
     private async Task MostrarTicketExitoso(dynamic datos, List<TicketItemDto> productos)
     {
+        // Mapeamos los pagos realizados del resultado del diálogo de pago
+        var listaPagos = ((List<PagoDialog.PagoDetalle>)datos.Pagos).Select(p => new VentaExitosaDialog.PagoDetalleDto
+        {
+            Metodo = p.Metodo,
+            Monto = p.Monto
+        }).ToList();
+
         var parametersExito = new DialogParameters<VentaExitosaDialog>
         {
-            { x => x.TotalPagado, (decimal)datos.TotalPagado },
+            { x => x.TotalPagado, (decimal)datos.TotalFinal }, // El total real de la venta
             { x => x.Descuento, (decimal)datos.Descuento },
-            { x => x.MetodoPago, (string)datos.Metodo },
-            { x => x.ProductosVendidos, productos }, 
-            { x => x.SerieNumero, $"B001-{DateTime.Now:mmssff}" } 
+            { x => x.Vuelto, (decimal)datos.Vuelto },
+            { x => x.PagosRealizados, listaPagos }, // Lista de todos los medios usados
+            { x => x.ProductosVendidos, productos },
+            { x => x.SerieNumero, $"B001-{DateTime.Now:mmssff}" }
         };
 
-        var options = new DialogOptions { CloseButton = false, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var options = new DialogOptions
+        {
+            CloseButton = false,
+            BackdropClick = false, // Evita que lo cierren sin querer
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
         await DialogService.ShowAsync<VentaExitosaDialog>("Comprobante", parametersExito, options);
     }
 

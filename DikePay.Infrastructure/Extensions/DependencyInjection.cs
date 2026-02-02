@@ -26,6 +26,7 @@ namespace DikePay.Infrastructure.Extensions
 
             // Registramos todos los servicios de API aquí
             services.AddScoped<IArticuloApiService, ArticuloApiService>();
+            services.AddScoped<IPromocionApiService, PromocionApiService>();
 
             #region Configuramos el HttpClient con Polly
             services.AddHttpClient("DikePayApi", client =>

@@ -241,23 +241,23 @@
             <span>Inicio</span>
         </button>
 
-        @* 2. Inventario *@
-        <button class="nav-item-custom @(GetActiveClass("/inventario"))" @onclick="@(() => Navigation.NavigateTo("/inventario"))">
-            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Medium" />
-            <span>Stock</span>
+        @* 4. Historial/Comandas (u otra opción) *@
+            <button class="nav-item-custom @(GetActiveClass("/facturacion/dashboard"))" @onclick="@(() => Navigation.NavigateTo("/facturacion/dashboard"))">
+                <MudIcon Icon="@Icons.Material.Filled.LocalMall" Size="Size.Medium" />
+            <span>Ventas</span>
         </button>
 
         @* 3. BOTÓN CENTRAL: NUEVA VENTA *@
-        <button class="nav-item-central" @onclick="@(() => Navigation.NavigateTo("/facturacion/dashboard"))">
+        <button class="nav-item-central" @onclick="@(() => Navigation.NavigateTo("/facturacion/ventas"))">
             <div class="sale-fab">
                 <MudIcon Icon="@Icons.Material.Filled.AddShoppingCart" Size="Size.Large" />
             </div>
-        </button>
+        </button>        
 
-        @* 4. Historial/Comandas (u otra opción) *@
-        <button class="nav-item-custom @(GetActiveClass("/comanda"))" @onclick="@(() => Navigation.NavigateTo("/comanda"))">
-            <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Medium" />
-            <span>Comandas</span>
+        @* 4. Inventario *@
+        <button class="nav-item-custom @(GetActiveClass("/inventario"))" @onclick="@(() => Navigation.NavigateTo("/inventario"))">
+            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Medium" />
+            <span>Stock</span>
         </button>
 
         @* 5. Ajustes *@

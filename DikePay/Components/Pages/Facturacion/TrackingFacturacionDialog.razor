@@ -3,93 +3,108 @@
 @inject INetworkService ConnectivityService
 
 <style>
+    /* Ocultamos los botones por defecto del stepper para control total */
     .mud-stepper-actions {
         display: none !important;
+    }
+
+    /* Animación suave para la entrada de los botones finales */
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 </style>
 
 <MudDialog>
     <DialogContent>
-        <MudPaper Class="pa-4" Style="min-width:420px">
+        <MudPaper Elevation="0" Class="pa-2" >
 
-            <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
-                Procesando comprobante
-            </MudText>
+            @if (!_procesoCompleto && _steps[2] != StepStatus.Error)
+            {
+                <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2"><b>Finalizando Operación</b></MudText>
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-6 rounded-pill" Size="Size.Small" />
+            }
+            else if (_procesoCompleto)
+            {
+                <div class="d-flex flex-column align-center mb-4 fade-in">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" Style="font-size: 3rem;" />
+                    <MudText Typo="Typo.h5" Color="Color.Success"><b>¡Venta Exitosa!</b></MudText>
+                </div>
+            }
 
-            <MudStepper Vertical HideActions="true" @bind-ActiveIndex="_activeStep">
+            <MudStepper Vertical HideActions="true" @bind-ActiveIndex="_activeStep" Class="mud-width-full">
 
-                <MudStep Title="Generando factura"
-                         Completed="@IsCompleted(0)"
-                         CompletedIcon="@Icons.Material.Filled.CheckCircle"
-                         SecondaryText="@GetStatusText(0)">
-                    <MudText Typo="Typo.body2">
-                        Registrando la venta y generando el comprobante.
-                    </MudText>
+                <MudStep Title="Generando Comprobante" Completed="@IsCompleted(0)"
+                         SecondaryText="@GetDescription(0)" Icon="@GetStepIcon(0)">
                 </MudStep>
 
-                <MudStep Title="Generación de XML"
-                         Completed="@IsCompleted(1)"
-                         CompletedIcon="@Icons.Material.Filled.CheckCircle"
-                         SecondaryText="@GetStatusText(1)">
-                    <MudText Typo="Typo.body2">
-                        Creando el XML electrónico.
-                    </MudText>
+                <MudStep Title="Preparando XML Electrónico" Completed="@IsCompleted(1)"
+                         SecondaryText="@GetDescription(1)" Icon="@GetStepIcon(1)">
                 </MudStep>
 
-                <MudStep Title="Declaración OSE / SUNAT"
-                         Completed="@IsCompleted(2)"
-                         CompletedIcon="@Icons.Material.Filled.CheckCircle"
-                         SecondaryText="@GetStatusText(2)">
-                    <MudText Typo="Typo.body2">
-                        Enviando a OSE / SUNAT.
-                    </MudText>
+                <MudStep Title="Comunicación con SUNAT / OSE" Completed="@IsCompleted(2)"
+                         SecondaryText="@GetDescription(2)" Icon="@GetStepIcon(2)">
                 </MudStep>
 
-                <MudStep Title="Publicación"
-                         Completed="@IsCompleted(3)"
-                         CompletedIcon="@Icons.Material.Filled.CheckCircle"
-                         SecondaryText="@GetStatusText(3)">
-                    <MudText Typo="Typo.body2">
-                        Publicando comprobante.
-                    </MudText>
+                <MudStep Title="Confirmación Final" Completed="@IsCompleted(3)"
+                         SecondaryText="@GetDescription(3)" Icon="@GetStepIcon(3)">
                 </MudStep>
 
             </MudStepper>
 
             @if (_procesoCompleto)
             {
-                <MudDivider Class="my-4" />
+                <div class="mt-6 fade-in">
+                    <MudStack Spacing="2">
+                        <MudButton Color="Color.Primary"
+                                   Variant="Variant.Filled"
+                                   FullWidth
+                                   Size="Size.Large"
+                                   StartIcon="@Icons.Material.Filled.Print"
+                                   OnClick="VerTicket"
+                                   Class="rounded-lg py-3">
+                            IMPRIMIR TICKET
+                        </MudButton>
 
-                <MudButton Color="Color.Primary"
-                           Variant="Variant.Filled"
-                           FullWidth
-                           StartIcon="@Icons.Material.Filled.ReceiptLong"
-                           OnClick="VerTicket">
-                    Ver impresión en formato ticket
-                </MudButton>
-
-                <MudButton Color="Color.Secondary" Class="mt-3"
-                           Variant="Variant.Filled"
-                           FullWidth
-                           StartIcon="@Icons.Material.Filled.Close"
-                           OnClick="CerrarModal">
-                    Cerrar
-                </MudButton>
+                        <MudButton Color="Color.Default"
+                                   Variant="Variant.Outlined"
+                                   FullWidth
+                                   OnClick="CerrarModal"
+                                   Class="rounded-lg">
+                            Finalizar y Salir
+                        </MudButton>
+                    </MudStack>
+                </div>
             }
 
             @if (_steps[2] == StepStatus.Error)
             {
-                <MudAlert Severity="Severity.Error" Dense Variant="Variant.Filled" Class="mt-3">
-                    No hay conexión a Internet. No se pudo enviar el comprobante a SUNAT.
-                </MudAlert>
+                <div class="mt-4 pa-4 rounded-lg" style="background-color: var(--mud-palette-error-hover);">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@Icons.Material.Filled.WifiOff" Color="Color.Error" Size="Size.Large" />
+                        <MudText Typo="Typo.subtitle1" Color="Color.Error" Align="Align.Center"><b>Sin conexión a Internet</b></MudText>
+                        <MudText Typo="Typo.body2" Align="Align.Center">El comprobante se guardó localmente. Se enviará a SUNAT automáticamente cuando recuperes la conexión.</MudText>
 
-                <MudButton Color="Color.Secondary" Class="mt-3"
-                           Variant="Variant.Filled"
-                           FullWidth
-                           StartIcon="@Icons.Material.Filled.Close"
-                           OnClick="CerrarModal">
-                    Cerrar
-                </MudButton>
+                        <MudButton Color="Color.Error"
+                                   Variant="Variant.Filled"
+                                   FullWidth
+                                   Class="mt-2 rounded-lg"
+                                   OnClick="CerrarModal">
+                            Entendido, cerrar
+                        </MudButton>
+                    </MudStack>
+                </div>
             }
 
         </MudPaper>
@@ -97,15 +112,12 @@
 </MudDialog>
 
 @code {
-
-    [CascadingParameter]
-    IMudDialogInstance MudDialog { get; set; } = null!;
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
 
     private int _activeStep = 0;
     private bool _procesoCompleto = false;
 
-    private readonly StepStatus[] _steps =
-    {
+    private readonly StepStatus[] _steps = {
         StepStatus.Pending,
         StepStatus.Pending,
         StepStatus.Pending,
@@ -117,6 +129,43 @@
         await EjecutarProceso();
     }
 
+    private string GetDescription(int index)
+    {
+        // Si el paso falló
+        if (_steps[index] == StepStatus.Error) return "Error en el proceso";
+
+        // Si el paso ya se completó, devolvemos un mensaje de "Éxito" corto
+        if (_steps[index] == StepStatus.Success)
+        {
+            return index switch
+            {
+                0 => "Venta registrada localmente",
+                1 => "XML generado correctamente",
+                2 => "Documento aceptado por SUNAT",
+                3 => "¡Comprobante publicado y listo!",
+                _ => "Completado"
+            };
+        }
+
+        // Si el paso está en proceso o pendiente, devolvemos la descripción original
+        return index switch
+        {
+            0 => _steps[index] == StepStatus.Processing ? "Registrando..." : "Esperando registro local",
+            1 => _steps[index] == StepStatus.Processing ? "Estructurando..." : "Pendiente de generación XML",
+            2 => _steps[index] == StepStatus.Processing ? "Enviando a SUNAT..." : "Pendiente de envío fiscal",
+            3 => _steps[index] == StepStatus.Processing ? "Validando..." : "Esperando confirmación final",
+            _ => ""
+        };
+    }
+
+    private string GetStepIcon(int index)
+    {
+        if (_steps[index] == StepStatus.Processing) return Icons.Material.Filled.Sync;
+        if (_steps[index] == StepStatus.Success) return Icons.Material.Filled.CheckCircle;
+        if (_steps[index] == StepStatus.Error) return Icons.Material.Filled.Error;
+        return Icons.Material.Filled.Circle;
+    }
+
     private async Task EjecutarProceso()
     {
         for (int i = 0; i < _steps.Length; i++)
@@ -125,25 +174,17 @@
             _steps[i] = StepStatus.Processing;
             StateHasChanged();
 
-            await Task.Delay(1500); // aquí va tu lógica real
+            await Task.Delay(1200); // Simulación de carga
 
-            // 🔴 VALIDACIÓN CRÍTICA EN PASO 3 (índice 2)
             if (i == 2 && !ConnectivityService.HasInternet)
             {
                 _steps[i] = StepStatus.Error;
-
-                // El paso 4 queda pendiente explícitamente
-                if (_steps.Length > 3)
-                    _steps[3] = StepStatus.Pending;
-
                 StateHasChanged();
-                return; // ⛔ Cortamos el flujo
+                return;
             }
 
             _steps[i] = StepStatus.Success;
             StateHasChanged();
-
-            await Task.Delay(300);
 
             if (i < _steps.Length - 1)
                 _activeStep = i + 1;
@@ -153,34 +194,19 @@
         StateHasChanged();
     }
 
-    private void VerTicket()
+    private bool IsCompleted(int index) => _steps[index] == StepStatus.Success;
+
+    private string GetStatusText(int index) => _steps[index] switch
     {
-        MudDialog.Close(DialogResult.Ok(true));
-    }
+        StepStatus.Pending => "En espera",
+        StepStatus.Processing => "Procesando...",
+        StepStatus.Success => "Listo",
+        StepStatus.Error => "Omitido / Error",
+        _ => ""
+    };
 
-    private bool IsCompleted(int index)
-        => _steps[index] == StepStatus.Success;
+    private void VerTicket() => MudDialog.Close(DialogResult.Ok(true));
+    private void CerrarModal() => MudDialog.Cancel();
 
-    private string GetStatusText(int index)
-        => _steps[index] switch
-        {
-            StepStatus.Pending => "Pendiente",
-            StepStatus.Processing => "Generando...",
-            StepStatus.Success => "Completado",
-            StepStatus.Error => "Error",
-            _ => ""
-        };
-
-    private enum StepStatus
-    {
-        Pending,
-        Processing,
-        Success,
-        Error
-    }
-
-    private void CerrarModal()
-    {
-        MudDialog.Cancel();
-    }
+    private enum StepStatus { Pending, Processing, Success, Error }
 }

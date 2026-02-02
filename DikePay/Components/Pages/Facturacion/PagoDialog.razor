@@ -1,154 +1,240 @@
 ﻿@using MudBlazor
 @inject ISnackbar Snackbar
-@using DikePay.Helpers
 
-<MudDialog>
+<MudDialog DefaultFocus="DefaultFocus.FirstChild">
     <TitleContent>
-        <div class="d-flex align-center">
-            <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Class="mr-2" Color="Color.Primary"/>
-            <MudText Typo="Typo.h6"><b>Finalizar Transacción</b></MudText>
-        </div>
+        <MudStack Row AlignItems="AlignItems.Center" Class="px-2">
+            <MudIcon Icon="@Icons.Material.Filled.PointOfSale" Color="Color.Primary" Size="Size.Large" />
+            <MudText Typo="Typo.h5"><b>Finalizar Cobro</b></MudText>
+        </MudStack>
     </TitleContent>
+
     <DialogContent>
-        <MudContainer Style="max-height: 70vh; overflow-y: auto;" Class="pa-0">
-            <MudStack Spacing="4">
-                
-                <MudPaper Elevation="0" Class="pa-4" Style="background: linear-gradient(135deg, #594ae20a 0%, #594ae21a 100%); border: 1px dashed #594AE2;">
-                    <MudStack Spacing="1">
-                        <div class="d-flex justify-space-between align-center">
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Subtotal de productos</MudText>
-                            <MudText Typo="Typo.body1">S/ @TotalVenta.ToString("N2")</MudText>
-                        </div>
-                        
-                        <div class="d-flex justify-space-between align-center">
-                            <MudText Typo="Typo.body2" Color="Color.Error">Descuento aplicado</MudText>
-                            <MudText Typo="Typo.body1" Color="Color.Error">- S/ @_descuento.ToString("N2")</MudText>
-                        </div>
+        @* SOLUCIÓN PARA MÓVIL: 
+           Limitamos la altura máxima del contenido y activamos el scroll. 
+           pb-12 (padding-bottom) asegura que el contenido no choque con los botones.
+        *@
+        <div style="max-height: 65vh; overflow-y: auto;" class="px-2 pb-12">
+            <MudGrid Spacing="4" Class="pa-2">
+                <MudItem xs="12" md="7">
+                    <MudText Typo="Typo.subtitle1" Class="mb-3"><b>1. Seleccionar Medio de Pago</b></MudText>
 
-                        <MudDivider Class="my-2" Style="background-color: #594AE2; opacity: 0.2;"/>
-                        
-                        <div class="d-flex justify-space-between align-end">
-                            <MudText Typo="Typo.h6"><b>Total a Cobrar</b></MudText>
-                            <MudText Typo="Typo.h4" Color="Color.Primary"><b>S/ @TotalFinal.ToString("N2")</b></MudText>
-                        </div>
-                    </MudStack>
-                </MudPaper>
+                    <div class="d-flex flex-wrap gap-3 mb-6">
+                        @foreach (var metodo in _metodosDisponibles)
+                        {
+                            <MudButton Variant="(_metodoSeleccionado == metodo.Key ? Variant.Filled : Variant.Outlined)"
+                                       Color="metodo.Value.Color"
+                                       OnClick="@(() => _metodoSeleccionado = metodo.Key)"
+                                       StartIcon="@metodo.Value.Icon"
+                                       Size="Size.Large"
+                                       Class="rounded-xl px-6 py-3">
+                                @metodo.Key
+                            </MudButton>
+                        }
+                    </div>
 
-                <MudNumericField @bind-Value="_descuento" Label="Aplicar Descuento" 
-                                 Variant="Variant.Outlined" Margin="Margin.Dense" 
-                                 Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.LocalOffer"
-                                 AdornmentColor="Color.Primary" Immediate="true" Min="0" Max="@TotalVenta" 
-                                 HelperText="Monto fijo en Soles" />
+                    <MudText Typo="Typo.subtitle1" Class="mb-3"><b>2. Ingresar Monto</b></MudText>
+                    <MudPaper Elevation="0" Class="pa-6 rounded-xl border-2 border-dashed" Style="background: var(--mud-palette-background-grey);">
+                        <MudNumericField @bind-Value="_montoIngresado"
+                                         Label="@($"Monto a recibir en {_metodoSeleccionado}")"
+                                         Variant="Variant.Outlined"
+                                         T="decimal"
+                                         Format="N2"
+                                         HideSpinButtons="true"
+                                         Class="bg-white rounded-lg"
+                                         Style="font-size: 1.5rem; font-weight: bold;"
+                                         HelperText="Presione 'Agregar Pago' después de ingresar el monto"
+                                         Adornment="Adornment.Start" AdornmentText="S/" />
 
-                <div>
-                    <MudText Typo="Typo.subtitle2" Class="mb-2"><b>Medio de Pago</b></MudText>
-                    @* <MudChipSet T="string" @bind-SelectedValue="_metodoSeleccionado" CheckMark="true" Mandatory="true" Class="d-flex flex-wrap justify-center">
-                        <MudChip Value="@("CONTADO")" Color="Color.Success" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Payments">Efectivo</MudChip>
-                        <MudChip Value="@("TARJETA")" Color="Color.Info" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.CreditCard">Tarjeta</MudChip>
-                        <MudChip Value="@("YAPE")" Color="Color.Secondary" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.QrCodeScanner">Yape/Plin</MudChip>
-                        <MudChip Value="@("PAGOEFECTIVO")" Color="Color.Warning" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.AccountBalance">PagoEfectivo</MudChip>
-                    </MudChipSet> *@
-                    <MudChipSet T="string" @bind-SelectedValue="_metodoSeleccionado" CheckMark="true" Mandatory="true" Class="d-flex flex-wrap justify-center">
-    
-                        @* Efectivo *@
-                        <MudChip Value="@("CONTADO")" Color="Color.Success" Variant="Variant.Filled" 
-                                 Icon="@Icons.Material.Filled.Payments">Efectivo</MudChip>
-
-                        @* Tarjetas - Separadas *@
-                        <MudChip Value="@("VISA")" Style="color: #1a1f71; border-color: #1a1f71;" Variant="Variant.Outlined"
-                                 Icon="@Icons.Custom.Brands.Microsoft">Visa</MudChip>
-    
-                        <MudChip Value="@("MASTERCARD")" Style="color: #eb001b; border-color: #f79e1b;" Variant="Variant.Outlined"
-                                 Icon="@Icons.Material.Filled.CreditCard">Mastercard</MudChip>
-
-                        @* Billeteras Digitales - Separadas por color de marca *@
-                        <MudChip Value="@("YAPE")" Style="background-color: #742284; color: white;" Variant="Variant.Filled"
-                                 Icon="@Icons.Material.Filled.QrCodeScanner">YAPE</MudChip>
-    
-                        <MudChip Value="@("PLIN")" Style="background-color: #00d1ce; color: white;" Variant="Variant.Filled"
-                                 Icon="@Icons.Material.Filled.AdsClick">PLIN</MudChip>
-
-                    </MudChipSet>
-                </div>
-
-                @if (_metodoSeleccionado == "CONTADO")
-                {
-                    <MudPaper Elevation="0" Class="pa-4" Style="background-color: #f5f5f5; border-radius: 12px;">
-                        <MudNumericField @bind-Value="_montoRecibido" Label="Monto Recibido" 
-                                         Variant="Variant.Filled" Adornment="Adornment.Start" AdornmentText="S/" 
-                                         Immediate="true" SelectAllTextOnFocus="true" Color="Color.Primary" />
-                        
-                        <div class="d-flex flex-wrap gap-2 mt-3">
+                        <div class="d-flex flex-wrap gap-2 mt-4">
                             @foreach (var m in new int[] { 10, 20, 50, 100 })
                             {
-                                <MudButton Variant="Variant.Filled" Color="Color.Default" Size="Size.Small" 
-                                           OnClick="@(() => _montoRecibido += m)">+@m</MudButton>
+                                <MudButton Variant="Variant.Filled" Color="Color.Default"
+                                           Size="Size.Large"
+                                           OnClick="@(() => _montoIngresado += m)">+@m</MudButton>
                             }
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" 
-                                       OnClick="@(() => _montoRecibido = TotalFinal)">Exacto</MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                       Size="Size.Large"
+                                       OnClick="@(() => _montoIngresado = SaldoRestante)">Monto Exacto</MudButton>
+
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.AddCircle"
+                                       Size="Size.Large"
+                                       OnClick="AgregarPago"
+                                       Disabled="@(_montoIngresado <= 0)"
+                                       Class="ml-auto px-8">
+                                Agregar Pago
+                            </MudButton>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="5">
+                    <MudPaper Elevation="4" Class="pa-6 rounded-xl h-100" Style="background: #fafafa; border: 1px solid #e0e0e0;">
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4"><b>RESUMEN DE CUENTA</b></MudText>
+
+                        <div class="d-flex justify-space-between mb-2">
+                            <MudText Typo="Typo.body1">Subtotal Productos</MudText>
+                            <MudText Typo="Typo.body1">S/ @TotalVenta.ToString("N2")</MudText>
                         </div>
 
-                        @if (Vuelto >= 0)
-                        {
-                            <div class="mt-4 pa-3 d-flex justify-space-between align-center" style="background-color: #e8f5e9; border-radius: 8px;">
-                                <MudText Typo="Typo.subtitle1" Color="Color.Success"><b>Vuelto al cliente:</b></MudText>
-                                <MudText Typo="Typo.h5" Color="Color.Success"><b>S/ @Vuelto.ToString("N2")</b></MudText>
-                            </div>
-                        }
-                        else
-                        {
-                            <MudText Color="Color.Error" Typo="Typo.caption" Class="mt-2 d-block">Faltan S/ @(Math.Abs(Vuelto).ToString("N2")) para cubrir el total.</MudText>
-                        }
+                        <MudNumericField @bind-Value="_descuento" Label="Aplicar Descuento (S/)"
+                                         Variant="Variant.Text" Margin="Margin.Dense"
+                                         Immediate="true" Min="0" Max="@TotalVenta"
+                                         Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.LocalOffer" />
+
+                        <MudDivider Class="my-4" Style="height: 2px;" />
+
+                        <div class="d-flex justify-space-between align-center mb-4">
+                            <MudText Typo="Typo.h5"><b>Total Final</b></MudText>
+                            <MudText Typo="Typo.h4" Color="Color.Primary"><b>S/ @TotalFinal.ToString("N2")</b></MudText>
+                        </div>
+
+                        @* Lista de Pagos *@
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mt-6 mb-2">PAGOS REGISTRADOS</MudText>
+                        <MudPaper Outlined="true" Class="pa-2 rounded-lg bg-white" Style="min-height: 120px; max-height: 200px; overflow-y: auto;">
+                            @if (!_pagosRealizados.Any())
+                            {
+                                <div class="d-flex flex-column align-center justify-center py-4" style="opacity: 0.5;">
+                                    <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Size="Size.Medium" />
+                                    <MudText Typo="Typo.caption">No hay pagos agregados</MudText>
+                                </div>
+                            }
+                            else
+                            {
+                                <MudList T="string" Clickable="false" Dense="true">
+                                    @foreach (var pago in _pagosRealizados)
+                                    {
+                                        <MudListItem Icon="@GetMetodoIcon(pago.Metodo)" IconColor="GetMetodoColor(pago.Metodo)">
+                                            <div class="d-flex justify-space-between align-center">
+                                                <MudText Typo="Typo.body2">@pago.Metodo</MudText>
+                                                <div class="d-flex align-center">
+                                                    <MudText Typo="Typo.body2" Class="mr-2"><b>S/ @pago.Monto.ToString("N2")</b></MudText>
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => _pagosRealizados.Remove(pago))" />
+                                                </div>
+                                            </div>
+                                        </MudListItem>
+                                    }
+                                </MudList>
+                            }
+                        </MudPaper>
+
+                        <div class="mt-4">
+                            @if (SaldoRestante > 0)
+                            {
+                                <div class="pa-3 rounded-lg d-flex justify-space-between align-center animate-pulse" style="background-color: #fff4e5; border: 1px solid #ffa117;">
+                                    <MudText Color="Color.Warning" Typo="Typo.body1"><b>Pendiente:</b></MudText>
+                                    <MudText Color="Color.Warning" Typo="Typo.h6"><b>S/ @SaldoRestante.ToString("N2")</b></MudText>
+                                </div>
+                            }
+                            else if (Vuelto > 0)
+                            {
+                                <div class="pa-3 rounded-lg d-flex justify-space-between align-center" style="background-color: #e8f5e9; border: 1px solid #2e7d32;">
+                                    <MudText Color="Color.Success" Typo="Typo.body1"><b>Vuelto:</b></MudText>
+                                    <MudText Color="Color.Success" Typo="Typo.h6"><b>S/ @Vuelto.ToString("N2")</b></MudText>
+                                </div>
+                            }
+                        </div>
                     </MudPaper>
-                }
-            </MudStack>
-        </MudContainer>
+                </MudItem>
+            </MudGrid>
+        </div>
     </DialogContent>
+
+    @* Padding de seguridad en la parte inferior para la barra de navegación del celular *@
     <DialogActions>
-        <MudButton OnClick="Cancelar" Variant="Variant.Text" Color="Color.Default" Class="px-6">Cerrar</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" 
-                   Disabled="@EsPagoInvalido"
-                   OnClick="ConfirmarPago" 
-                   Size="Size.Large"
-                   Class="px-10 py-2 rounded-pill shadow-lg">
-            Finalizar Compra
-        </MudButton>
+        <div class="d-flex w-100 px-4 pb-6">
+            <MudButton OnClick="Cancelar" Variant="Variant.Text" Color="Color.Default" Size="Size.Large">Cancelar</MudButton>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Size="Size.Large"
+                       Disabled="@(SaldoRestante > 0 || TotalPagado == 0)"
+                       OnClick="ConfirmarTransaccion"
+                       Style="height: 54px; min-width: 200px;"
+                       Class="rounded-pill shadow-lg">
+                FINALIZAR VENTA
+            </MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
 
+
+<style>
+    .animate-pulse {
+        animation: pulse 2s infinite;
+    }
+
+    @@keyframes pulse {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.7;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+</style>
+
 @code {
-    
-    [CascadingParameter] 
-    IMudDialogInstance MudDialog { get; set; } = null!;
-    
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
     [Parameter] public decimal TotalVenta { get; set; }
 
-    private string _metodoSeleccionado = "CONTADO";
+    private string _metodoSeleccionado = "EFECTIVO";
     private decimal _descuento;
-    private decimal _montoRecibido;
+    private decimal _montoIngresado;
+    private List<PagoDetalle> _pagosRealizados = new();
 
     private decimal TotalFinal => TotalVenta - _descuento;
-    private decimal Vuelto => _montoRecibido - TotalFinal;
+    private decimal TotalPagado => _pagosRealizados.Sum(x => x.Monto);
+    private decimal SaldoRestante => Math.Max(0, TotalFinal - TotalPagado);
+    private decimal Vuelto => TotalPagado > TotalFinal ? TotalPagado - TotalFinal : 0;
 
-    // Lógica Senior: Encapsular la validación
-    private bool EsPagoInvalido => (_metodoSeleccionado == "CONTADO" && Vuelto < 0) || TotalFinal < 0;
+    private void AgregarPago()
+    {
+        if (_montoIngresado <= 0) return;
+        _pagosRealizados.Add(new PagoDetalle { Metodo = _metodoSeleccionado, Monto = _montoIngresado });
+        _montoIngresado = 0;
+    }
+
+    private void ConfirmarTransaccion()
+    {
+        var resultado = new PagoResultado
+        {
+            TotalOriginal = TotalVenta,
+            Descuento = _descuento,
+            TotalFinal = TotalFinal,
+            Pagos = _pagosRealizados,
+            Vuelto = Vuelto
+        };
+        MudDialog.Close(DialogResult.Ok(resultado));
+    }
 
     private void Cancelar() => MudDialog.Cancel();
 
-    private void ConfirmarPago()
+    private Dictionary<string, (string Icon, Color Color)> _metodosDisponibles = new()
     {
-        // En un entorno profesional, devolvemos un objeto con toda la transacción
-        var resultado = new
-        {
-            Metodo = _metodoSeleccionado,
-            TotalOriginal = TotalVenta,
-            Descuento = _descuento,
-            TotalPagado = TotalFinal,
-            MontoRecibido = _metodoSeleccionado == "CONTADO" ? _montoRecibido : TotalFinal,
-            Vuelto = _metodoSeleccionado == "CONTADO" ? Vuelto : 0
-        };
+        { "EFECTIVO", (Icons.Material.Filled.Payments, Color.Success) },
+        { "YAPE", (Icons.Material.Filled.QrCodeScanner, Color.Secondary) },
+        { "PLIN", (Icons.Material.Filled.AdsClick, Color.Info) },
+        { "VISA", (Icons.Material.Filled.CreditCard, Color.Primary) },
+        { "MASTERCARD", (Icons.Material.Filled.CreditCard, Color.Error) }
+    };
 
-        // Cerramos este diálogo devolviendo el resultado
-        MudDialog.Close(DialogResult.Ok(resultado));
+    private string GetMetodoIcon(string m) => _metodosDisponibles.GetValueOrDefault(m).Icon;
+    private Color GetMetodoColor(string m) => _metodosDisponibles.GetValueOrDefault(m).Color;
+
+    public class PagoDetalle { public string Metodo { get; set; } = ""; public decimal Monto { get; set; } }
+    public class PagoResultado
+    {
+        public decimal TotalOriginal { get; set; }
+        public decimal Descuento { get; set; }
+        public decimal TotalFinal { get; set; }
+        public List<PagoDetalle> Pagos { get; set; } = new();
+        public decimal Vuelto { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using DikePay.Application.DTOs.Articulos.Response;
-using DikePay.Application.Interfaces.Maui;
+using DikePay.Application.DTOs.Promocion.Response;
+using DikePay.Application.Interfaces;
 using DikePay.Application.Interfaces.Repositories;
 using DikePay.Application.Interfaces.Services;
 using DikePay.Domain.Entities;
@@ -12,7 +13,10 @@ namespace DikePay.Application.Services
         private readonly IArticuloApiService _api;      // El que trae del servidor
         private readonly IArticuloRepository _repo;    // El que guarda en SQLite
         private readonly INotificationService _notifService;
-        
+        private readonly IPromocionApiService _promociones;
+        private readonly IPromocionesRepository _promocionesRepository;
+        private readonly INetworkService _network;
+
         private readonly AppState _appState;
         public event Action<string>? OnSyncCompleted;
         public event Action<string>? OnSyncError;
@@ -25,54 +29,70 @@ namespace DikePay.Application.Services
         public double Progreso { get; private set; }
 
         public SyncService(
-            IArticuloApiService api, 
-            IArticuloRepository repo, 
-            INotificationService notificationService,            
+            IArticuloApiService api,
+            IArticuloRepository repo,
+            INotificationService notificationService,
+            IPromocionApiService promociones,
+            IPromocionesRepository promocionesRepository,
+            INetworkService network,
             AppState appState)
         {
             _api = api;
             _repo = repo;
             _appState = appState;
             _notifService = notificationService;
-            
+            _promociones = promociones;
+            _promocionesRepository = promocionesRepository;
+            _network = network;
         }
 
-        
+
         public async Task SincronizarTodoAsync()
         {
-            // Si ya está corriendo O si ya se sincronizó en esta sesión, salimos.
             if (EstaSincronizando || HasSyncedThisSession) return;
 
             try
             {
 
+                if (!_network.HasInternet)
+                {
+                    throw new Exception("Usuario no cuenta con conexión para la sincronización de información.");
+                }
+
                 EstaSincronizando = true;
                 UltimoError = null;
-                OnSyncStarted?.Invoke(); // Notificamos que se inicio la sincronización
+                OnSyncStarted?.Invoke();
                 _appState.NotifyStateChanged();
 
+                // 1. Descarga paralela (Opcional para velocidad)
                 var articulosDto = await _api.GetArticulosFromApiAsync();
+                var promocionesDto = await _promociones.GetPromocionFromApiAsync();
 
-                //throw new Exception("ERROR DE PRUEBA");
+                int conteoArticulos = 0;
+                int conteoPromos = 0;
 
+                // 2. Procesar Artículos
                 if (articulosDto != null && articulosDto.Any())
                 {
                     var entidades = articulosDto.Select(MapToEntity).ToList();
                     await _repo.SaveAllAsync(entidades);
-                    await _appState.InicializarAppAsync();
-
-                    HasSyncedThisSession = true;
-                    OnSyncCompleted?.Invoke($"Se actualizaron {entidades.Count} productos correctamente.");
+                    conteoArticulos = entidades.Count;
                 }
 
-                OnSyncCompleted?.Invoke("");
+                // 3. Procesar Promociones
+                if (promocionesDto != null && promocionesDto.Any())
+                {
+                    var entidadesPromos = promocionesDto.Select(MapToEntityPromocion).ToList();
+                    await _promocionesRepository.SaveAllAsync(entidadesPromos);
+                    conteoPromos = entidadesPromos.Count;
+                }
 
-            }
-            catch (HttpRequestException ex)
-            {
-                UltimoError = "No se pudo conectar con el servidor. Revisa tu internet.";
-                _notifService.Agregar("Falla de Conexión", "Revisa tu internet para actualizar el catálogo.", TipoNotificacion.Error);
-                OnSyncError?.Invoke(UltimoError);
+                // 4. Finalizar
+                await _appState.InicializarAppAsync();
+                HasSyncedThisSession = true;
+
+                string mensajeExito = $"Sincronización completa: {conteoArticulos} productos y {conteoPromos} promociones.";
+                OnSyncCompleted?.Invoke(mensajeExito);
             }
             catch (Exception ex)
             {
@@ -84,9 +104,7 @@ namespace DikePay.Application.Services
             finally
             {
                 EstaSincronizando = false;
-                // IMPORTANTE: Volvemos a invocar en el hilo principal al terminar
                 _appState.NotifyStateChanged();
-                
             }
         }
 
@@ -99,5 +117,20 @@ namespace DikePay.Application.Services
             CodigoSku = dto.Sku
         };
 
+        private Promocion MapToEntityPromocion(PromocionDto dto) => new Promocion
+        {
+            Id = dto.Id.ToString(),
+            CodigoPromocion = dto.CodigoPromocion,
+            Nombre = dto.Nombre,
+            Descripcion = dto.Descripcion,
+            TipoPromocion = dto.TipoPromocion,
+            ArticuloId = dto.ArticuloId.ToString(),
+            CantidadMinima = dto.CantidadMinima,
+            NuevoPrecio = dto.NuevoPrecio,
+            PorcentajeDescuento = dto.PorcentajeDescuento,
+            FechaInicio = dto.FechaInicio,
+            FechaFin = dto.FechaFin,
+            Estado = dto.Estado
+        };
     }
 }

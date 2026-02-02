@@ -1,7 +1,7 @@
 ﻿@using MudBlazor
-@using Microsoft.Maui.ApplicationModel @* Necesario para Browser.OpenAsync *@
-@using Microsoft.Maui.Storage @* Para FileSystem *@
-@using Microsoft.Maui.ApplicationModel.DataTransfer @* Para Share *@
+@using Microsoft.Maui.ApplicationModel
+@using Microsoft.Maui.Storage
+@using Microsoft.Maui.ApplicationModel.DataTransfer
 @using DikePay.Application.Interfaces.Services
 @using DikePay.Application.DTOs.Impresion
 @inject ISnackbar Snackbar
@@ -9,99 +9,147 @@
 
 <MudDialog>
     <DialogContent>
-        <MudStack AlignItems="AlignItems.Center" Spacing="2">
+        @* 1. max-height: 65vh limita el alto para que el diálogo no se pierda en la pantalla.
+           2. overflow-y: auto permite el scroll vertical si el ticket es largo.
+           3. overflow-x: hidden asegura que NADA se mueva hacia los lados.
+        *@
+        <div style="max-height: 65vh; overflow-y: auto; overflow-x: hidden; width: 100%;" class="px-2">
+            
+            @* Encabezado de Éxito Centrado *@
+            <div class="d-flex flex-column align-center w-100 mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+                         Color="Color.Success"
+                         Style="font-size: 5rem; display: block;"
+                         Class="mx-auto" />
 
-            @* Icono de éxito con animación sutil *@
-            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" Style="font-size: 4rem;" />
-            <MudText Typo="Typo.h5" Color="Color.Success"><b>¡Cobro Exitoso!</b></MudText>
+                <MudText Typo="Typo.h5"
+                         Color="Color.Success"
+                         Align="Align.Center"
+                         Style="width: 100%;"
+                         Class="mt-2">
+                    <b>¡Cobro Exitoso!</b>
+                </MudText>
+            </div>
 
-            @* Representación Visual de la Boleta (Estilo Ticket Térmico) *@
-            <MudPaper Elevation="4" Class="pa-6 my-2"
-                      Style="width: 300px; background-color: #fffdec; border: 1px solid #e0e0e0; font-family: 'Courier New', Courier, monospace; color: #333;">
+            <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="w-100">
+                
+                @* TICKET RESPONSIVO:
+                   Cambiamos 'width: 320px' por 'max-width: 300px' para que en celulares 
+                   pequeños se ajuste automáticamente y no genere scroll horizontal.
+                *@
+                <MudPaper Elevation="4" Class="pa-6 my-2"
+                          Style="width: 100%; max-width: 300px; background-color: #fffdec; border: 1px dashed #bcbcbc; font-family: 'Courier New', Courier, monospace; color: #333; margin: 0 auto;">
 
-                <MudStack AlignItems="AlignItems.Center" Spacing="0">
-                    <MudText Typo="Typo.h6" Style="letter-spacing: 2px;"><b>DIKEPAY POS</b></MudText>
-                    <MudText Typo="Typo.caption">RUC: 10456789012</MudText>
-                    <MudText Typo="Typo.caption">Calle Los Emprendedores 123</MudText>
-                    <MudText Typo="Typo.caption">Lima, Perú</MudText>
-                    <MudText Typo="Typo.caption">--------------------------------</MudText>
-                    <MudText Typo="Typo.body2"><b>BOLETA DE VENTA ELECTRÓNICA</b></MudText>
-                    <MudText Typo="Typo.body2"><b>@SerieNumero</b></MudText>
-                    <MudText Typo="Typo.caption">Fecha: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</MudText>
-                    <MudText Typo="Typo.caption">--------------------------------</MudText>
-                </MudStack>
+                    <MudStack AlignItems="AlignItems.Center" Spacing="0" Style="width: 100%;">
+                        <MudText Typo="Typo.h6" Align="Align.Center" Style="letter-spacing: 2px; width: 100%;"><b>DIKEPAY POS</b></MudText>
+                        <MudText Typo="Typo.caption" Align="Align.Center" Style="width: 100%;">RUC: 10456789012</MudText>
+                        <MudText Typo="Typo.caption" Align="Align.Center" Style="width: 100%;">Calle Los Emprendedores 123</MudText>
 
-                <div class="mt-4" style="min-height: 80px;">
-                    @foreach (var item in ProductosVendidos)
-                    {
-                        <div class="d-flex justify-space-between mb-1">
-                            <MudText Typo="Typo.caption" Style="max-width: 180px; overflow: hidden;">
-                                @item.Cantidad x @item.Nombre
-                            </MudText>
-                            <MudText Typo="Typo.caption">S/ @((item.Precio * item.Cantidad).ToString("N2"))</MudText>
-                        </div>
-                    }
-                </div>
+                        <MudText Typo="Typo.caption" Align="Align.Center" Class="my-1">--------------------------------</MudText>
 
-                <MudStack Spacing="0" Class="mt-4">
-                    <MudText Typo="Typo.caption">--------------------------------</MudText>
+                        <MudText Typo="Typo.body2" Align="Align.Center" Style="width: 100%;"><b>BOLETA ELECTRÓNICA</b></MudText>
+                        <MudText Typo="Typo.body2" Align="Align.Center" Style="width: 100%;"><b>@SerieNumero</b></MudText>
+                        <MudText Typo="Typo.caption" Align="Align.Center" Style="width: 100%;">Fecha: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</MudText>
 
-                    @if (Descuento > 0)
-                    {
-                        <div class="d-flex justify-space-between">
-                            <MudText Typo="Typo.caption">DESCUENTO:</MudText>
-                            <MudText Typo="Typo.caption">- S/ @Descuento.ToString("N2")</MudText>
-                        </div>
-                    }
+                        <MudText Typo="Typo.caption" Align="Align.Center" Class="my-1">--------------------------------</MudText>
+                    </MudStack>
 
-                    <div class="d-flex justify-space-between">
-                        <MudText Typo="Typo.body1"><b>TOTAL A PAGAR:</b></MudText>
-                        <MudText Typo="Typo.body1"><b>S/ @TotalPagado.ToString("N2")</b></MudText>
+                    @* Detalle de Productos con manejo de texto largo *@
+                    <div class="mt-4" style="min-height: 50px; width: 100%;">
+                        @foreach (var item in ProductosVendidos)
+                        {
+                            <div class="d-flex justify-space-between mb-1" style="width: 100%;">
+                                <MudText Typo="Typo.caption" Style="width: 65%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                    @($"{item.Cantidad:N0} {item.Nombre}")
+                                </MudText>
+                                <MudText Typo="Typo.caption" Style="width: 35%; text-align: right; white-space: nowrap;">
+                                    S/ @((item.Precio * item.Cantidad).ToString("N2"))
+                                </MudText>
+                            </div>
+                        }
                     </div>
 
-                    <div class="d-flex justify-space-between mt-1">
-                        <MudText Typo="Typo.caption">MÉTODO PAGO:</MudText>
-                        <MudText Typo="Typo.caption">@MetodoPago</MudText>
-                    </div>
+                    @* Totales *@
+                    <MudStack Spacing="0" Class="mt-4" Style="width: 100%;">
+                        <MudText Typo="Typo.caption" Align="Align.Center">--------------------------------</MudText>
 
-                    <MudText Typo="Typo.caption">--------------------------------</MudText>
-                    <MudText Typo="Typo.caption" Align="Align.Center" Class="mt-2">
-                        Representación impresa de la boleta de venta.
-                    </MudText>
-                    <MudText Typo="Typo.body2" Align="Align.Center"><b>¡GRACIAS POR SU COMPRA!</b></MudText>
-                </MudStack>
-            </MudPaper>
+                        @if (Descuento > 0)
+                        {
+                            <div class="d-flex justify-space-between w-100">
+                                <MudText Typo="Typo.caption">DESCUENTO:</MudText>
+                                <MudText Typo="Typo.caption">- S/ @Descuento.ToString("N2")</MudText>
+                            </div>
+                        }
 
-            <MudText Typo="Typo.caption" Color="Color.Secondary">Envíe el comprobante digital al cliente</MudText>
+                        <div class="d-flex justify-space-between py-1 w-100">
+                            <MudText Typo="Typo.body1"><b>TOTAL PAGADO:</b></MudText>
+                            <MudText Typo="Typo.body1"><b>S/ @TotalPagado.ToString("N2")</b></MudText>
+                        </div>
 
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       FullWidth="true"
-                       StartIcon="@Icons.Material.Filled.Print"
-                       Size="Size.Large"
-                       OnClick="PrepararComprobanteYCompartir"
-                       Class="rounded-pill mb-2">
-                IMPRIMIR / GENERAR PDF
-            </MudButton>
+                        <div class="mt-2 w-100">
+                            <MudText Typo="Typo.caption" Style="text-decoration: underline;">FORMAS DE PAGO:</MudText>
+                            @foreach (var p in PagosRealizados)
+                            {
+                                <div class="d-flex justify-space-between w-100">
+                                    <MudText Typo="Typo.caption">@p.Metodo:</MudText>
+                                    <MudText Typo="Typo.caption">S/ @p.Monto.ToString("N2")</MudText>
+                                </div>
+                            }
+                        </div>
 
-            @* Botón Secundario: Texto plano (El que sí abre WhatsApp directo) *@
-            <MudButton Variant="Variant.Outlined"
-                       Color="Color.Success"
-                       FullWidth="true"
-                       StartIcon="@Icons.Custom.Brands.WhatsApp"
-                       Size="Size.Medium"
-                       OnClick="CompartirSoloTexto"
-                       Class="rounded-pill">
-                ENVIAR RESUMEN POR WHATSAPP
-            </MudButton>
+                        @if (Vuelto > 0)
+                        {
+                            <div class="d-flex justify-space-between mt-1 w-100">
+                                <MudText Typo="Typo.caption">VUELTO:</MudText>
+                                <MudText Typo="Typo.caption">S/ @Vuelto.ToString("N2")</MudText>
+                            </div>
+                        }
 
-        </MudStack>
+                        <MudText Typo="Typo.caption" Align="Align.Center" Class="mt-2">--------------------------------</MudText>
+                        <MudText Typo="Typo.caption" Align="Align.Center" Class="mt-1" Style="width: 100%;">
+                            Representación impresa de la boleta.
+                        </MudText>
+                        <MudText Typo="Typo.body2" Align="Align.Center" Style="width: 100%;" Class="mt-1"><b>¡GRACIAS POR SU COMPRA!</b></MudText>
+                    </MudStack>
+                </MudPaper>
+
+                @* Botones de Acción Internos *@
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.Print"
+                           Size="Size.Large"
+                           OnClick="PrepararComprobanteYCompartir"
+                           Class="rounded-pill mt-4 py-3">
+                    IMPRIMIR / PDF
+                </MudButton>
+
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Success"
+                           FullWidth="true"
+                           StartIcon="@Icons.Custom.Brands.WhatsApp"
+                           OnClick="CompartirSoloTexto"
+                           Class="rounded-pill py-2">
+                    WHATSAPP RÁPIDO
+                </MudButton>
+            </MudStack>
+        </div>
     </DialogContent>
+
     <DialogActions>
-        <MudButton OnClick="Cerrar"
-                   Color="Color.Primary"
-                   Variant="Variant.Text"
-                   FullWidth="true">REALIZAR NUEVA VENTA</MudButton>
+        @* Contenedor con padding inferior extra (pb-8) para separar el botón 
+           de los gestos de navegación de Android/iOS.
+        *@
+        <div class="w-100 px-6 pb-8">
+            <MudButton OnClick="Cerrar"
+                       Color="Color.Default"
+                       Variant="Variant.Text"
+                       FullWidth="true"
+                       Size="Size.Large"
+                       Class="py-3">
+                NUEVA VENTA
+            </MudButton>
+        </div>
     </DialogActions>
 </MudDialog>
 
@@ -109,26 +157,26 @@
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
 
     [Parameter] public string SerieNumero { get; set; } = "B001-000001";
-    [Parameter] public decimal TotalPagado { get; set; }
+    [Parameter] public decimal TotalPagado { get; set; } // Total Final del Ticket
     [Parameter] public decimal Descuento { get; set; }
-    [Parameter] public string MetodoPago { get; set; } = "CONTADO";
+    [Parameter] public decimal Vuelto { get; set; }
     [Parameter] public List<TicketItemDto> ProductosVendidos { get; set; } = new();
+
+    // Cambiamos string MetodoPago por la lista de pagos para que cuadre con el resumen anterior
+    [Parameter] public List<PagoDetalleDto> PagosRealizados { get; set; } = new();
 
     private void Cerrar() => MudDialog.Close(DialogResult.Ok(true));
 
-    // Cambiamos el nombre para que sea honesto con lo que hace
     private async Task PrepararComprobanteYCompartir()
     {
         try
         {
             await PdfService.GenerarYImprimirAsync(SerieNumero, TotalPagado, ProductosVendidos);
-            Snackbar.Add("Seleccione 'Guardar como PDF' para enviar por WhatsApp", Severity.Info);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            // FALLBACK: Si falla la impresión, enviamos el texto plano para no dejar al usuario colgado
             await CompartirSoloTexto();
-            Snackbar.Add("Enviando como texto plano...", Severity.Info);
+            Snackbar.Add("No se pudo abrir la impresora, enviando texto...", Severity.Info);
         }
     }
 
@@ -142,4 +190,6 @@
         await Browser.Default.OpenAsync(url, BrowserLaunchMode.External);
     }
 
+    // DTOs locales si no los tienes globales
+    public class PagoDetalleDto { public string Metodo { get; set; } = ""; public decimal Monto { get; set; } }
 }
