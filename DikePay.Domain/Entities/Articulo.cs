@@ -17,6 +17,7 @@ namespace DikePay.Domain.Entities
         public string Nombre { get; set; } = string.Empty;
         public decimal Precio { get; set; }
         public decimal Stock { get; set; }
+        public decimal StockMinimo { get; set; }
 
         // --- Campos SUNAT y Operativos ---
         public string CodigoProductoSunat { get; set; } = string.Empty;

@@ -1,4 +1,6 @@
-﻿using DikePay.Application.Extensions;
+﻿using CommunityToolkit.Maui;
+using CommunityToolkit.Maui.Media;
+using DikePay.Application.Extensions;
 using DikePay.Extensions;
 using DikePay.Helpers;
 using DikePay.Infrastructure.Extensions;
@@ -18,6 +20,7 @@ namespace DikePay
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
+                .UseMauiCommunityToolkit()
                 .UseSkiaSharp()
                 .UseBarcodeReader()
                 .ConfigureFonts(fonts =>
@@ -38,6 +41,8 @@ namespace DikePay
                 config.SnackbarConfiguration.HideTransitionDuration = 200; // Más rápido (ms)
             });
 
+            builder.Services.AddSingleton<VoiceCommandService>();
+            builder.Services.AddSingleton<ISpeechToText>(SpeechToText.Default);
             builder.Services.AddSingleton<BarcodeScannerService>();
             builder.Services.AddSingleton<EscPosPrintService>();
             builder.Services.AddMauiBlazorWebView();

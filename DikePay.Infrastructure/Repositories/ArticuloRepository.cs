@@ -24,19 +24,6 @@ namespace DikePay.Infrastructure.Repositories
         {
             var db = await _context.GetConnectionAsync();
             int result = 0;
-
-            //// RunInTransactionAsync espera una Action<SQLiteConnection>
-            //// NO uses 'async' en el delegado de adentro
-            //await db.RunInTransactionAsync((SQLiteConnection conn) =>
-            //{
-            //    // Al ser una conexión síncrona (conn), las operaciones son directas
-            //    foreach (var articulo in articulos)
-            //    {
-            //        result += conn.InsertOrReplace(articulo);
-            //    }
-            //});
-
-            //return result;
             try
             {
                 await db.RunInTransactionAsync((SQLiteConnection conn) =>

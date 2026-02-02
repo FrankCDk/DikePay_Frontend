@@ -1,8 +1,10 @@
-﻿@page "/configuracion/acceso"
+﻿@using MudBlazor
+@page "/configuracion/acceso"
 @using DikePay.Application.Interfaces.Maui
 @using DikePay.Application.Interfaces.Services
 @inject IQrService QrService
 @inject IAuthService AuthService
+@inject ISnackbar Snackbar
 
 <MudText Typo="Typo.h5">Acceso Dispositivo Móvil</MudText>
 <MudPaper Class="pa-4 mt-4" Elevation="2">
@@ -29,14 +31,27 @@
 
 @code {
     private string _qrSvg;
+    private bool _isGenerating;
 
-    private void GenerarTokenAcceso()
+    private async Task GenerarTokenAcceso()
     {
-        // En un caso real, aquí pedirías al servidor un "ShortLivedToken"
-        // Para la prueba, usaremos un string con formato: "USUARIO|PASSWORD"
-        var datos = "admin@dikepay.com|Admin123*";
-        
-        // El servicio de QR que creamos antes
-        _qrSvg = QrService.GenerarQrBase64(datos);
+        _isGenerating = true;
+        try 
+        {
+            // SENIOR TIP: Nunca generes el secreto en el cliente.
+            // Llamamos a la API para que ella decida qué código usar.
+            var response = await AuthService.GenerateMobileAccessCodeAsync(); 
+            
+            if (response.Success) 
+            {
+                // El QR ahora solo contiene un TOKEN aleatorio, NO la clave
+                _qrSvg = QrService.GenerarQrBase64(response.Data); 
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("No se pudo generar el código: " + ex.Message, Severity.Error);
+        }
+        finally { _isGenerating = false; }
     }
 }

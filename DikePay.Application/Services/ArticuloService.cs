@@ -1,4 +1,5 @@
-﻿using DikePay.Application.DTOs.Articulos.Response;
+﻿using DikePay.Application.DTOs.Articulos.Request;
+using DikePay.Application.DTOs.Articulos.Response;
 using DikePay.Application.Interfaces.Repositories;
 using DikePay.Application.Interfaces.Services;
 using DikePay.Domain.Entities;
@@ -14,7 +15,7 @@ namespace DikePay.Application.Services
             _repository = repository;
         }
 
-        public async Task<bool> CrearArticuloAsync(Articulo articulo)
+        public async Task<bool> CrearArticuloAsync(ArticuloCreateDto articulo)
         {
             // 1. Lógica de negocio: No podemos tener códigos duplicados
             var existe = await _repository.ExistsAsync(articulo.Codigo);
@@ -23,17 +24,42 @@ namespace DikePay.Application.Services
             // 2. Otras validaciones (ej. stock no negativo)
             if (articulo.Precio < 0) return false;
 
-            var rows = await _repository.SaveAsync(articulo);
+            Articulo entity = new Articulo
+            {
+                Codigo = articulo.Codigo,
+                CodigoSku = articulo.CodigoSku,
+                Nombre = articulo.Nombre,
+                Precio = articulo.Precio,
+                Stock = articulo.Stock,
+                StockMinimo = articulo.StockMinimo,
+                Estado = "V",
+                UltimaActualizacion = DateTime.UtcNow
+            };
+
+
+            var rows = await _repository.SaveAsync(entity);
             return rows > 0;
         }
 
-        public async Task<bool> ActualizarArticuloAsync(Articulo articulo)
+        public async Task<bool> ActualizarArticuloAsync(ArticuloCreateDto articulo)
         {
             // Validamos que el artículo exista antes de intentar actualizar
             var existe = await _repository.GetByCodigoAsync(articulo.Codigo);
             if (existe == null) return false;
 
-            var rows = await _repository.UpdateAsync(articulo);
+            Articulo entity = new Articulo
+            {
+                Codigo = articulo.Codigo,
+                CodigoSku = articulo.CodigoSku,
+                Nombre = articulo.Nombre,
+                Precio = articulo.Precio,
+                Stock = articulo.Stock,
+                StockMinimo = articulo.StockMinimo,
+                Estado = "V",
+                UltimaActualizacion = DateTime.UtcNow
+            };
+
+            var rows = await _repository.UpdateAsync(entity);
             return rows > 0;
         }
 

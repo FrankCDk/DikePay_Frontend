@@ -14,9 +14,10 @@ namespace DikePay.Application.Extensions
             services.AddScoped<IArticuloService, ArticuloService>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<ISyncService, SyncService>();
+            services.AddScoped<IVersionService, VersionService>();
             services.AddScoped<IAlmacenamientoService, AlmacenamientoService>();
             services.AddScoped<IComandaRepository, ComandaService>();
-
+            
             // Registramos el estado de la aplicación como singleton
             services.AddSingleton<AppState>();
 

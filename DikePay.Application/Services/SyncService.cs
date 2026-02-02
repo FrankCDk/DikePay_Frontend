@@ -1,4 +1,5 @@
 ﻿using DikePay.Application.DTOs.Articulos.Response;
+using DikePay.Application.Interfaces.Maui;
 using DikePay.Application.Interfaces.Repositories;
 using DikePay.Application.Interfaces.Services;
 using DikePay.Domain.Entities;
@@ -10,20 +11,30 @@ namespace DikePay.Application.Services
     {
         private readonly IArticuloApiService _api;      // El que trae del servidor
         private readonly IArticuloRepository _repo;    // El que guarda en SQLite
+        private readonly INotificationService _notifService;
+        
         private readonly AppState _appState;
         public event Action<string>? OnSyncCompleted;
         public event Action<string>? OnSyncError;
+        public event Action? OnSyncStarted;
+        public string? UltimoError { get; private set; }
 
         public bool HasSyncedThisSession { get; private set; }
 
         public bool EstaSincronizando { get; private set; }
         public double Progreso { get; private set; }
 
-        public SyncService(IArticuloApiService api, IArticuloRepository repo, AppState appState)
+        public SyncService(
+            IArticuloApiService api, 
+            IArticuloRepository repo, 
+            INotificationService notificationService,            
+            AppState appState)
         {
             _api = api;
             _repo = repo;
             _appState = appState;
+            _notifService = notificationService;
+            
         }
 
         
@@ -34,10 +45,15 @@ namespace DikePay.Application.Services
 
             try
             {
+
                 EstaSincronizando = true;
+                UltimoError = null;
+                OnSyncStarted?.Invoke(); // Notificamos que se inicio la sincronización
                 _appState.NotifyStateChanged();
 
                 var articulosDto = await _api.GetArticulosFromApiAsync();
+
+                //throw new Exception("ERROR DE PRUEBA");
 
                 if (articulosDto != null && articulosDto.Any())
                 {
@@ -49,28 +65,34 @@ namespace DikePay.Application.Services
                     OnSyncCompleted?.Invoke($"Se actualizaron {entidades.Count} productos correctamente.");
                 }
 
+                OnSyncCompleted?.Invoke("");
 
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException ex)
             {
-                OnSyncError?.Invoke("No se pudo conectar con el servidor. Revisa tu internet.");
+                UltimoError = "No se pudo conectar con el servidor. Revisa tu internet.";
+                _notifService.Agregar("Falla de Conexión", "Revisa tu internet para actualizar el catálogo.", TipoNotificacion.Error);
+                OnSyncError?.Invoke(UltimoError);
             }
             catch (Exception ex)
             {
                 // Logueamos el error técnico internamente pero avisamos al usuario
-                Console.WriteLine($"Error crítico: {ex.Message}");
-                OnSyncError?.Invoke("Ocurrió un error inesperado al sincronizar.");
+                UltimoError = $"Error crítico: {ex.Message}";
+                _notifService.Agregar("Error de Sincronización", ex.Message, TipoNotificacion.Error);
+                OnSyncError?.Invoke(UltimoError);
             }
             finally
             {
                 EstaSincronizando = false;
                 // IMPORTANTE: Volvemos a invocar en el hilo principal al terminar
                 _appState.NotifyStateChanged();
+                
             }
         }
 
         private Articulo MapToEntity(ArticuloDto dto) => new Articulo
         {
+            Id = dto.Id.ToString(),
             Codigo = dto.Codigo,
             Nombre = dto.Nombre,
             Precio = dto.Precio,

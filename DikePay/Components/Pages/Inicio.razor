@@ -1,0 +1,80 @@
+﻿@page "/inicio"
+@using MudBlazor
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+    <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="mb-12">
+        <MudIcon Icon="@Icons.Material.Outlined.WavingHand" Size="Size.Large" Color="Color.Primary" />
+        <MudText Typo="Typo.h3" Align="Align.Center" Style="font-weight: 700;">
+            Bienvenido a DikePay
+        </MudText>
+        <MudText Typo="Typo.h6" Color="Color.Secondary" Align="Align.Center" Class="max-w-md">
+            Tu plataforma de facturación y gestión de inventario. ¿Qué deseas hacer hoy?
+        </MudText>
+    </MudStack>
+
+    <MudGrid Justify="Justify.Center">
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="0" Class="pa-6 d-flex flex-column align-center border-solid border-2 mud-border-primary rounded-lg hover-card">
+                <MudIcon Icon="@Icons.Material.Outlined.QrCodeScanner" Color="Color.Primary" Size="Size.Large" Class="mb-4" />
+                <MudText Typo="Typo.h6" GutterBottom="true">Acceso Móvil</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center" Class="mb-4">
+                    Genera un código seguro para iniciar sesión en tu dispositivo móvil sin contraseñas.
+                </MudText>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/configuracion/acceso">
+                    Configurar Acceso
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="0" Class="pa-6 d-flex flex-column align-center border-solid border-1 mud-border-lines-default rounded-lg hover-card">
+                <MudIcon Icon="@Icons.Material.Outlined.ReceiptLong" Color="Color.Tertiary" Size="Size.Large" Class="mb-4" />
+                <MudText Typo="Typo.h6" GutterBottom="true">Facturación</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center" Class="mb-4">
+                    Emite facturas electrónicas, gestiona notas de crédito y consulta tus comprobantes emitidos.
+                </MudText>
+                <MudButton Variant="Variant.Text" Color="Color.Tertiary" Href="/facturacion/ventas">
+                    Ir a Facturación
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="4">
+            <MudPaper Elevation="0" Class="pa-6 d-flex flex-column align-center border-solid border-1 mud-border-lines-default rounded-lg hover-card">
+                <MudIcon Icon="@Icons.Material.Outlined.Settings" Color="Color.Surface" Size="Size.Large" Class="mb-4" />
+                <MudText Typo="Typo.h6" GutterBottom="true">Ajustes</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center" Class="mb-4">
+                    Personaliza tu perfil, cambia tu contraseña o configura tus preferencias.
+                </MudText>
+                <MudButton Variant="Variant.Text" Color="Color.Default">Ir a Perfil</MudButton>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudStack AlignItems="AlignItems.Center" Class="mt-16">
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Icon="@Icons.Material.Outlined.Lightbulb" Class="rounded-pill">
+            Tip: Puedes usar el código QR para loguearte rápidamente desde la App de DikePay.
+        </MudAlert>
+    </MudStack>
+</MudContainer>
+
+<style>
+    .hover-card {
+        transition: all 0.3s ease;
+        background-color: transparent;
+    }
+
+        .hover-card:hover {
+            transform: translateY(-5px);
+            background-color: var(--mud-palette-background-grey);
+            border-color: var(--mud-palette-primary) !important;
+        }
+
+    .max-w-md {
+        max-width: 500px;
+    }
+</style>
+
+@code {
+    // Aquí podrías inyectar el AuthService para saludar al usuario por su nombre
+}

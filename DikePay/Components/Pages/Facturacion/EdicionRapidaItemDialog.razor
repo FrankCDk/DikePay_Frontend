@@ -1,0 +1,122 @@
+﻿@using MudBlazor
+@using DikePay.Domain.Entities
+@using DikePay.Application.Interfaces.Repositories
+@inject IPromocionesRepository PromocionesRepo
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <div class="text-center">
+                <MudText Typo="Typo.h6"><b>@Articulo.Nombre</b></MudText>
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
+                    SKU: @Articulo.CodigoSku
+                </MudChip>
+            </div>
+
+            @if (_promociones.Any())
+            {
+                <MudPaper Elevation="0" Class="pa-2 mb-2" Style="background-color: #fff9c4; border-radius: 8px;">
+                    <div class="d-flex align-center justify-space-between" @onclick="() => _showOffers = !_showOffers" style="cursor:pointer">
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.LocalOffer" Color="Color.Warning" Class="mr-2"/>
+                            <MudText Typo="Typo.subtitle2"><b>Ofertas disponibles (@_promociones.Count)</b></MudText>
+                        </div>
+                        <MudIcon Icon="@(_showOffers ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" />
+                    </div>
+
+                    <MudCollapse Expanded="_showOffers">
+                        <MudList T="string" Dense="true">
+                            @foreach (var promo in _promociones)
+                            {
+                                <MudListItem Icon="@Icons.Material.Filled.Stars" 
+                                             IconColor="@(Cantidad >= promo.CantidadMinima ? Color.Success : Color.Default)">
+                                    <div class="d-flex justify-space-between align-center">
+                                        <MudText Typo="Typo.body2">@promo.Descripcion</MudText>
+                                        @if (Cantidad < promo.CantidadMinima)
+                                        {
+                                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" 
+                                                       OnClick="() => AplicarPromo(promo)">
+                                                + @(promo.CantidadMinima - Cantidad) más
+                                            </MudButton>
+                                        }
+                                        else
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                                        }
+                                    </div>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudCollapse>
+                </MudPaper>
+            }
+
+            <div class="d-flex align-center justify-center gap-6 my-4">
+                <MudFab Color="Color.Error" StartIcon="@Icons.Material.Filled.Remove" OnClick="() => Cantidad--" Disabled="Cantidad <= 1" Size="Size.Small" />
+                <MudText Typo="Typo.h3"><b>@Cantidad</b></MudText>
+                <MudFab Color="Color.Success" StartIcon="@Icons.Material.Filled.Add" OnClick="() => Cantidad++" Size="Size.Small" />
+            </div>
+
+            <MudNumericField @bind-Value="PrecioFinal" Label="Precio Final" Variant="Variant.Outlined" 
+                            Adornment="Adornment.Start" AdornmentText="S/" Margin="Margin.Dense" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancelar" Variant="Variant.Text">Omitir</MudButton>
+        <MudButton OnClick="Confirmar" Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Class="py-3">
+            AGREGAR S/ @(Cantidad * PrecioFinal)
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public Articulo Articulo { get; set; } = null!;
+    [Parameter] public int CantidadInicial { get; set; }
+    
+    private int Cantidad = 1;
+    private decimal PrecioFinal;
+    private bool _showOffers = false;
+    private List<Promocion> _promociones = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        Console.WriteLine("¡El diálogo al menos intentó abrirse!");
+
+        try 
+        {
+            // Asegúrate de que los nombres de propiedad coincidan EXACTAMENTE 
+            // con los de tu clase Articulo (probablemente empiezan con Mayúscula)
+            PrecioFinal = (decimal)Articulo.Precio; 
+            Cantidad = CantidadInicial > 0 ? CantidadInicial : 1;
+        
+            _promociones = await PromocionesRepo.GetPromocionesVigentesByArticuloAsync(Articulo.Id);
+        
+            if(_promociones != null && _promociones.Any()) 
+                _showOffers = true;
+        }
+        catch (Exception ex)
+        {
+            // Esto te dirá en la consola del navegador por qué no abre
+            Console.WriteLine($"Error al abrir diálogo: {ex.Message}");
+            MudDialog.Cancel();
+        }
+    }
+
+    private void AplicarPromo(Promocion p)
+    {
+        Cantidad = (int)p.CantidadMinima;
+        
+        if (p.TipoPromocion == "CANTIDAD_FIJA") 
+            PrecioFinal = p.NuevoPrecio ?? (decimal)Articulo.Precio;
+        else if (p.TipoPromocion == "PORCENTAJE")
+            PrecioFinal = (decimal)Articulo.Precio * (1 - (p.PorcentajeDescuento ?? 0) / 100);
+            
+        _showOffers = false;
+    }
+
+    private void Confirmar() => MudDialog.Close(DialogResult.Ok(new { CantidadSeleccionada = Cantidad, PrecioAplicado = PrecioFinal }));
+    private void Cancelar() => MudDialog.Cancel();
+}

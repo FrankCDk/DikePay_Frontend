@@ -3,147 +3,345 @@
 @using DikePay.Application.DTOs.Impresion
 @using DikePay.Helpers
 @using DikePay.Application.Interfaces.Repositories
+@using DikePay.Components.Pages.Clientes
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject BarcodeScannerService ScannerService
 @inject IArticuloRepository ArticuloRepository
 
+<style>
+    /* 1. ESTILOS DE COMPONENTES CUSTOM */
+    .custom-toggle-group {
+        background-color: #f0f0f0;
+        border-radius: 12px;
+        padding: 4px;
+    }
+
+    .custom-toggle-group .mud-toggle-item {
+        border-radius: 8px !important;
+        margin: 2px;
+        border: none !important;
+        text-transform: none;
+        font-weight: bold;
+    }
+
+    .custom-toggle-group .mud-toggle-item-selected {
+        background-color: white !important;
+        color: black !important;
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* 2. ESTILOS DE LAYOUT MÓVIL */
+    .total-display-compact {
+        background-color: var(--mud-palette-primary-darken);
+        color: white;
+        border-radius: 8px;
+        padding: 10px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .mobile-table-container {
+        /* Altura calculada para que el scroll sea interno y no mueva las pestañas */
+        height: calc(100vh - 300px);
+        overflow-y: auto;
+    }
+
+    /* Limpieza de bordes de tabla para estilo App */
+    .mud-table-clean .mud-table-cell {
+        border-right: none !important;
+        border-left: none !important;
+        padding: 8px 4px !important;
+    }
+
+    .mud-tabs-toolbar {
+        height: 48px !important;
+    }
+
+    body {
+        overflow: hidden; /* Evita scroll doble en móviles */
+    }
+
+
+    /* Ajuste para que los iconos de los inputs densos no ocupen mucho espacio */
+    .mud-input-adornment-end {
+        margin-left: 0 !important;
+    }
+    
+    /* Para que el DatePicker móvil no sea gigante */
+    .mud-picker-inline {
+        margin-top: 0 !important;
+    }
+
+    /* Forzar que el contenedor del cliente no tenga overflow que desalinee el botón */
+    .d-flex.align-center.gap-2 {
+        display: flex;
+        align-items: flex-start !important; /* Alineamos arriba y el margin-top del botón hace el resto */
+    }
+
+    /* Mejora visual para los campos densos */
+    .mud-input-control.mud-input-control-margin-dense {
+        margin-top: 4px;
+    }
+
+</style>
+
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-2 mt-md-4">
-    <MudText Typo="Typo.h4" Class="mb-4" Color="Color.Primary"><b>DikePay</b> - Nueva Venta</MudText>
+    <MudText Typo="Typo.h4" Class="mb-4 d-none d-md-block" Color="Color.Primary" Style="font-weight: 700;">
+        <b>DikePay</b> - Nueva Venta
+    </MudText>
 
-    <MudGrid Spacing="2">
-        <MudItem xs="12" md="4">
-            <MudStack Spacing="3">
-                <MudPaper Class="pa-4" Elevation="2">
-                    <MudText Typo="Typo.subtitle2" Class="mb-2"><b>Comprobante</b></MudText>
-                    <MudGrid Spacing="1">
-                        <MudItem xs="6">
-                            <MudSelect T="string" Label="Tipo" @bind-Value="_tipoDoc" Variant="Variant.Outlined" Margin="Margin.Dense">
-                                <MudSelectItem Value="@("Boleta")" />
-                                <MudSelectItem Value="@("Factura")" />
-                            </MudSelect>
-                        </MudItem>
-                        <MudItem xs="6">
-                            <MudSelect T="string" Label="Moneda" @bind-Value="_moneda" Variant="Variant.Outlined" Margin="Margin.Dense">
-                                <MudSelectItem Value="@("PEN")">Soles</MudSelectItem>
-                                <MudSelectItem Value="@("USD")">Dólares</MudSelectItem>
-                            </MudSelect>
-                        </MudItem>
-                        <MudItem xs="12">
-                            <MudAutocomplete T="string" Label="Cliente" @bind-Value="_clienteNombre" SearchFunc="@SearchClientes"
+    @if (IsMobile)
+    {
+        @* VISTA MÓVIL OPTIMIZADA *@
+        <MudContainer Class="pa-2">
+            <MudTabs Elevation="2" Rounded="true" Centered="true" Color="Color.Primary" PanelClass="pa-2">
+                
+                @* PESTAÑA 1: VENTA (Foco en velocidad de carga) *@
+                <MudTabPanel Text="Venta" Icon="@Icons.Material.Filled.ShoppingCart">
+                    
+                    @* HEADER DE IMPORTE (Siempre visible al vendedor) *@
+                    <div class="total-display-compact">
+                        <MudText Typo="Typo.subtitle2">TOTAL A COBRAR</MudText>
+                        <MudText Typo="Typo.h6"><b>@_simboloMoneda @_totalVenta.ToString("N2")</b></MudText>
+                    </div>
+
+                    @* FILA DE ENTRADA COMPACTA *@
+                    <div class="d-flex align-center gap-1 mb-2">
+                        <MudIconButton Icon="@Icons.Material.Filled.CameraAlt" Color="Color.Primary" 
+                                       Variant="Variant.Filled" OnClick="AbrirEscanner" Size="Size.Small" />
+                        
+                        <div style="flex-grow: 1; min-width: 0;">
+                            <MudAutocomplete T="Articulo" Placeholder="Producto..." @bind-Value="_productoSeleccionado"
+                                             SearchFunc="@SearchProductos" ToStringFunc="@(p => p?.Nombre)"
                                              Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" />
-                        </MudItem>
-                    </MudGrid>
-                </MudPaper>
+                        </div>
 
-                <MudPaper Class="pa-4" Elevation="2">
-                    <div class="d-flex align-center justify-space-between mb-2">
-                        <MudText Typo="Typo.subtitle2"><b>Artículos</b></MudText>
+                        <div style="width: 55px;">
+                            <MudNumericField @bind-Value="_cantidadAgregar" Placeholder="Cant" Min="1" 
+                                             Variant="Variant.Outlined" Margin="Margin.Dense" HideSpinButtons="true" />
+                        </div>
 
-                        @* BOTÓN DE CÁMARA: Solo visible en móviles reales *@
-                        @if (IsMobile)
-                        {
-                            <MudIconButton Icon="@Icons.Material.Filled.CameraAlt"
-                                           Color="Color.Primary"
-                                           Variant="Variant.Filled"
-                                           Size="Size.Medium"
-                                           OnClick="AbrirEscanner" />
-                        }
+                        <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Success" 
+                                       Variant="Variant.Filled" OnClick="AgregarAlCarrito" Size="Size.Small" />
                     </div>
 
-                    <MudAutocomplete T="Articulo" Label="Nombre o SKU" @bind-Value="_productoSeleccionado"
-                                     SearchFunc="@SearchProductos" ToStringFunc="@(p => p?.Nombre)"
-                                     Variant="Variant.Outlined" Margin="Margin.Dense" MaxItems="27" />
-
-                    <div class="d-flex align-center mt-3">
-                        <MudNumericField @bind-Value="_cantidadAgregar" Label="Cant." Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mr-2" />
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AgregarAlCarrito" FullWidth="true" Style="height: 40px;">
-                            Agregar
-                        </MudButton>
+                    @* TABLA SIN BORDES CON SCROLL INTERNO *@
+                    <div class="mobile-table-container">
+                        @RenderSeccionVentaSoloTabla()
                     </div>
-                </MudPaper>
-            </MudStack>
-        </MudItem>
+                </MudTabPanel>
 
-        <MudItem xs="12" md="8">
-            <MudTable Items="@_carrito" Hover="true" Elevation="2" Dense="true" FixedHeader="true" Height="350px">
-                <HeaderContent>
-                    <MudTh>Producto</MudTh>
-                    <MudTh Style="text-align:right">Subtotal</MudTh>
-                    <MudTh></MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd>
-                        <MudText Typo="Typo.body2"><b>@context.Producto.Nombre</b></MudText>
-                        <MudText Typo="Typo.caption">@context.Cantidad x @_simboloMoneda @context.PrecioUnitario</MudText>
-                    </MudTd>
-                    <MudTd Style="text-align:right">@_simboloMoneda @context.Subtotal.ToString("N2")</MudTd>
-                    <MudTd Style="text-align:right">
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => EliminarItem(context))" />
-                    </MudTd>
-                </RowTemplate>
-            </MudTable>
-            <MudPaper Class="pa-4 mt-3 d-flex justify-space-between align-center" 
-              Elevation="4" 
-              Style="@($"background-color: var(--mud-palette-primary); color: var(--mud-palette-primary-text);")">
-                <div>
-                    @* Usamos la variable de texto contrastante para que siempre sea legible *@
-                    <MudText Typo="Typo.caption" Style="opacity: 0.7;">TOTAL</MudText>
-                    <MudText Typo="Typo.h5"><b>@_simboloMoneda @_totalVenta.ToString("N2")</b></MudText>
-                </div>
-                @* Usamos Variant.Filled y color Surface para que el botón resalte sobre el fondo Primary *@
-                <MudButton Variant="Variant.Filled" 
-                           Style="@($"background-color: var(--mud-palette-surface); color: var(--mud-palette-primary); font-weight: bold;")"
-                           Size="Size.Large"
-                           Disabled="@(!_carrito.Any())" 
-                           OnClick="ProcesarPago">
-                    PAGAR
-                </MudButton>
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
+                @* PESTAÑA 2: INFO Y CIERRE DE VENTA *@
+                <MudTabPanel Text="Pagar" Icon="@Icons.Material.Filled.CheckCircle">
+                    <MudStack Spacing="3" Class="mt-2">
+                        @RenderSeccionComprobante()
+                        
+                        <MudDivider Class="my-2" />
+                        
+                        <div class="pa-4 mud-text-align-center">
+                            <MudText Typo="Typo.body1" Color="Color.Secondary">Resumen de cobro</MudText>
+                            <MudText Typo="Typo.h4" Class="mb-6"><b>@_simboloMoneda @_totalVenta.ToString("N2")</b></MudText>
+                            
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Warning" 
+                                       FullWidth="true" 
+                                       Size="Size.Large"
+                                       Disabled="@(!_carrito.Any())"
+                                       OnClick="ProcesarPago"
+                                       Style="height: 64px; font-weight: 900; font-size: 1.3rem; color: black;">
+                                FINALIZAR Y PAGAR
+                            </MudButton>
+                        </div>
+                    </MudStack>
+                </MudTabPanel>
+            </MudTabs>
+        </MudContainer>
+    }
+    else
+    {
+        @* VISTA ESCRITORIO (Standard MudGrid) *@
+        <MudGrid Spacing="2">
+            <MudItem xs="12" md="4">
+                <MudStack Spacing="3">
+                    @RenderSeccionComprobante()
+                </MudStack>
+            </MudItem>
+
+            <MudItem xs="12" md="8">
+                <MudStack Spacing="3">
+                    @RenderSeccionVenta()
+                </MudStack>
+            </MudItem>
+
+            <MudItem xs="12">
+                @RenderBarraAccion()
+            </MudItem>
+        </MudGrid>
+    }
 </MudContainer>
 
+
 @code {
+
+    RenderFragment RenderSeccionVentaSoloTabla() => __builder => {
+        <MudTable Items="@_carrito" Hover="true" Elevation="0" Dense="true" Bordered="false" Class="mud-table-clean">
+            <HeaderContent>
+                <MudTh>Detalle</MudTh>
+                <MudTh Style="text-align:right">Total</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudText Typo="Typo.body2" Style="font-size: 0.85rem; line-height: 1.1;"><b>@context.Producto.Nombre</b></MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Cantidad x @context.PrecioUnitario</MudText>
+                </MudTd>
+                <MudTd Style="text-align:right; vertical-align: middle;">
+                    <MudText Typo="Typo.body2"><b>@context.Subtotal.ToString("N2")</b></MudText>
+                </MudTd>
+                <MudTd Style="text-align:right; width: 40px;">
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => EliminarItem(context))" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    };
+
+//     RenderFragment RenderSeccionComprobante() => __builder => {
+//     <MudPaper Class="pa-2" Elevation="1"> @* Reducido de pa-4 a pa-2 *@
+//         <MudText Typo="Typo.caption" Class="mb-1" Style="font-weight: bold; color: gray;">DATOS DEL COMPROBANTE</MudText>
+//         <MudGrid Spacing="1" Class="ma-0"> @* Spacing mínimo *@
+//             <MudItem xs="12" Class="pa-1">
+//                 <MudToggleGroup T="string" @bind-Value="_tipoDoc" Delimiters="false" 
+//                                 Size="Size.Small" Class="mud-width-full custom-toggle-group">
+//                     <MudToggleItem Value="@("Boleta")" Text="Boleta" />
+//                     <MudToggleItem Value="@("Factura")" Text="Factura" />
+//                 </MudToggleGroup>
+//             </MudItem>
+//             <MudItem xs="5" Class="pa-1">
+//                 <MudSelect T="string" Label="Moneda" @bind-Value="_moneda" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+//                     <MudSelectItem Value="@("PEN")">Soles</MudSelectItem>
+//                     <MudSelectItem Value="@("USD")">Dólares</MudSelectItem>
+//                 </MudSelect>
+//             </MudItem>
+//             <MudItem xs="7" Class="pa-1">
+//                  <MudAutocomplete T="string" Label="Cliente" @bind-Value="_clienteNombre" SearchFunc="@SearchClientes"
+//                                Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" />
+//             </MudItem>
+//         </MudGrid>
+//     </MudPaper>
+// };
+
+RenderFragment RenderSeccionComprobante() => __builder => {
+    <MudPaper Class="pa-3" Elevation="1">
+        <MudText Typo="Typo.caption" Class="mb-3 d-block" Style="font-weight: bold; color: gray; letter-spacing: 1px;">
+            DATOS DEL COMPROBANTE
+        </MudText>
+        
+        <MudGrid Spacing="2">
+            @* Fila 1: Tipo de Documento *@
+            <MudItem xs="12" Class="mb-4">
+                <MudToggleGroup T="string" @bind-Value="_tipoDoc" Delimiters="false" 
+                                Size="Size.Small" Class="mud-width-full custom-toggle-group">
+                    <MudToggleItem Value="@("Boleta")" Text="Boleta" />
+                    <MudToggleItem Value="@("Factura")" Text="Factura" />
+                </MudToggleGroup>
+            </MudItem>
+
+            @* Fila 2: Fecha y Moneda (Separados con spacing) *@
+            <MudItem xs="6">
+                <MudDatePicker Label="Fecha Emisión" @bind-Date="_fechaEmision" 
+                               Variant="Variant.Outlined" Margin="Margin.Dense" 
+                               DateFormat="dd/MM/yyyy" Editable="true" />
+            </MudItem>
+
+            <MudItem xs="6">
+                <MudSelect T="string" Label="Moneda" @bind-Value="_moneda" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                    <MudSelectItem Value="@("PEN")">
+                        <div class="d-flex align-center">
+                            <MudText Typo="Typo.body2" Class="mr-2"><b>S/</b></MudText> Soles
+                        </div>
+                    </MudSelectItem>
+                    <MudSelectItem Value="@("USD")">
+                        <div class="d-flex align-center">
+                            <MudText Typo="Typo.body2" Class="mr-2"><b>$</b></MudText> Dólares
+                        </div>
+                    </MudSelectItem>
+                </MudSelect>
+            </MudItem>
+
+            @* Fila 3: Cliente (Alineación corregida) *@
+            <MudItem xs="12" Class="mt-4">
+                <div class="d-flex align-center gap-2">
+                    <div style="flex-grow: 1;">
+                        <MudAutocomplete T="string" Label="Cliente" @bind-Value="_clienteNombre" SearchFunc="@SearchClientes"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" 
+                                       ResetValueOnEmptyText="true" CoerceText="true"
+                                       AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Primary" />
+                    </div>
+                    @* El margin-top compensa el espacio de la "Label" del input para que el botón baje *@
+                    <div style="margin-top: 8px;">
+                        <MudTooltip Text="Nuevo Cliente">
+                            <MudIconButton Icon="@Icons.Material.Filled.PersonAdd" Color="Color.Success" 
+                                           Variant="Variant.Filled" OnClick="AbrirRegistroCliente" Size="Size.Medium" 
+                                           Style="height: 37px; width: 40px; border-radius: 8px;" />
+                        </MudTooltip>
+                    </div>
+                </div>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+};
+
+RenderFragment RenderSeccionVenta() => __builder => {
+        <MudPaper Class="pa-4" Elevation="1">
+            <div class="d-flex align-center gap-2 mb-4">
+                <MudAutocomplete T="Articulo" Label="Producto" @bind-Value="_productoSeleccionado"
+                                 SearchFunc="@SearchProductos" ToStringFunc="@(p => p?.Nombre)"
+                                 Variant="Variant.Outlined" Margin="Margin.Dense" Class="flex-grow-1" />
+                <MudNumericField @bind-Value="_cantidadAgregar" Label="Cant." Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 80px;" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AgregarAlCarrito" Style="height: 40px;">Agregar</MudButton>
+            </div>
+            @RenderSeccionVentaSoloTabla()
+        </MudPaper>
+    };
+
+    // 2. BARRA DE ACCIÓN PERSISTENTE
+    RenderFragment RenderBarraAccion() => __builder => {
+        bool tieneItems = _carrito.Any();
+        
+        <MudPaper Class="pa-4 d-flex justify-space-between align-center" Elevation="4" 
+                  Style="@($"background-color: var(--mud-palette-primary); color: white; border-radius: 12px;")">
+            <div>
+                <MudText Typo="Typo.caption" Style="opacity: 0.8; line-height: 1;">TOTAL A COBRAR</MudText>
+                <MudText Typo="Typo.h5"><b>@_simboloMoneda @_totalVenta.ToString("N2")</b></MudText>
+            </div>
+            <MudButton Variant="Variant.Filled" 
+                       Color="@(tieneItems ? Color.Warning : Color.Surface)" 
+                       Size="Size.Large" 
+                       Disabled="@(!tieneItems)" 
+                       OnClick="ProcesarPago" 
+                       Style="@($"font-weight: 900; min-width: 120px; {(tieneItems ? "color: black;" : "color: var(--mud-palette-primary);")}")">
+                PAGAR
+            </MudButton>
+        </MudPaper>
+    };
+
+
+
+
+
     // Datos de Cabecera
     private string _tipoDoc = "Boleta";
     private string _moneda = "PEN";
     private string _vendedor = "Juan Programador"; // Simular usuario logueado
     private string _clienteNombre = "Público General";
     private string _simboloMoneda => _moneda == "PEN" ? "S/" : "$";
+    private decimal _descuentoAgregar = 0;
+    private DateTime? _fechaEmision = DateTime.Today;
     private bool IsMobile => DeviceInfo.Current.Platform == DevicePlatform.Android || DeviceInfo.Current.Platform == DevicePlatform.iOS;
-
-    // Datos de Productos (Tienda de Abarrotes)
-    // private List<Articulo> _productosDisponibles = new()
-    // {
-    //     new Articulo { Codigo = "ARR", Nombre = "Arroz Costeño 1kg", Precio = 4.50m, CodigoSku = "ARR-001", Stock = 100 },
-    //     new Articulo { Codigo = "ACE", Nombre = "Aceite Primor 1L", Precio = 11.20m, CodigoSku = "ACE-002", Stock = 50 },
-    //     new Articulo { Codigo = "LEC", Nombre = "Leche Gloria Azul 400g", Precio = 3.80m, CodigoSku = "LEC-003", Stock = 120 },
-    //     new Articulo { Codigo = "FID", Nombre = "Fideos Don Vittorio 500g", Precio = 3.20m, CodigoSku = "FID-004", Stock = 80 },
-    //     new Articulo { Codigo = "DET", Nombre = "Detergente Bolívar 1kg", Precio = 9.50m, CodigoSku = "DET-005", Stock = 40 },
-    //     new Articulo { Codigo = "ATU", Nombre = "Atún Primor Trozos", Precio = 6.50m, CodigoSku = "ATU-001", Stock = 45 },
-    //     new Articulo { Codigo = "YOG", Nombre = "Yogurt Gloria Fresa 1L", Precio = 7.20m, CodigoSku = "YOG-002", Stock = 20 },
-    //     new Articulo { Codigo = "GAL", Nombre = "Galletas Soda Field", Precio = 0.80m, CodigoSku = "GAL-006", Stock = 200 },
-    //     new Articulo { Codigo = "GAS", Nombre = "Gaseosa Inca Kola 500ml", Precio = 2.50m, CodigoSku = "GAS-007", Stock = 60 },
-    //     new Articulo { Codigo = "PAN", Nombre = "Pan de Molde Bimbo", Precio = 8.50m, CodigoSku = "PAN-008", Stock = 15 },
-    //     new Articulo { Codigo = "SAL", Nombre = "Sal Marina Lobos 1kg", Precio = 2.00m, CodigoSku = "SAL-009", Stock = 100 },
-    //     new Articulo { Codigo = "AZU", Nombre = "Azúcar Rubia Paramonga 1kg", Precio = 4.20m, CodigoSku = "AZU-010", Stock = 90 },
-    //     new Articulo { Codigo = "CAF", Nombre = "Café Altomayo 200g", Precio = 15.00m, CodigoSku = "CAF-011", Stock = 30 },
-    //     new Articulo { Codigo = "MER", Nombre = "Mermelada Fanny Fresa", Precio = 5.50m, CodigoSku = "MER-012", Stock = 25 },
-    //     new Articulo { Codigo = "MAY", Nombre = "Mayonesa Alacena 200g", Precio = 4.80m, CodigoSku = "MAY-013", Stock = 40 },
-    //     new Articulo { Codigo = "PAP", Nombre = "Papel Higiénico Elite 4un", Precio = 6.50m, CodigoSku = "PAP-014", Stock = 55 },
-    //     new Articulo { Codigo = "SHA", Nombre = "Shampoo Head & Shoulders", Precio = 18.50m, CodigoSku = "SHA-015", Stock = 20 },
-    //     new Articulo { Codigo = "JAB", Nombre = "Jabón Bolívar 150g", Precio = 2.50m, CodigoSku = "JAB-016", Stock = 80 },
-    //     new Articulo { Codigo = "LEN", Nombre = "Lentejas Costeño 500g", Precio = 4.50m, CodigoSku = "LEN-017", Stock = 50 },
-    //     new Articulo { Codigo = "CHO", Nombre = "Chocolate Sublime", Precio = 2.50m, CodigoSku = "CHO-018", Stock = 100 },
-    //     new Articulo { Codigo = "QUE", Nombre = "Queso Edam Laive", Precio = 12.50m, CodigoSku = "QUE-019", Stock = 12 },
-    //     new Articulo { Codigo = "HUE", Nombre = "Huevo de Corral (Jaba 30)", Precio = 16.50m, CodigoSku = "HUE-020", Stock = 10 },
-    //     new Articulo { Codigo = "MAN", Nombre = "Mantequilla Gloria 200g", Precio = 6.20m, CodigoSku = "MAN-021", Stock = 35 },
-    //     new Articulo { Codigo = "VIN", Nombre = "Vinagre Blanco Primor", Precio = 2.80m, CodigoSku = "VIN-022", Stock = 20 },
-    //     new Articulo { Codigo = "AJI", Nombre = "Ajinomen Pollo", Precio = 1.80m, CodigoSku = "AJI-023", Stock = 150 },
-    //     new Articulo { Codigo = "HAR", Nombre = "Harina Blanca Flor 1kg", Precio = 6.50m, CodigoSku = "HAR-024", Stock = 40 },
-    //     new Articulo { Codigo = "AVE", Nombre = "Avena 3 Ositos 500g", Precio = 3.50m, CodigoSku = "AVE-025", Stock = 60 }
-    // };
 
     private List<Articulo> _productosDisponibles;
 
@@ -162,6 +360,28 @@
     private async Task<List<Articulo>> CargarProductos()
     {
         return await ArticuloRepository.GetAllAsync();
+    }
+
+    private async Task AbrirRegistroCliente()
+    {
+        var options = new DialogOptions { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.ExtraSmall, 
+            FullWidth = true,
+            BackdropClick = true 
+        };
+
+        // Aquí llamarías a tu componente de diálogo para crear cliente
+        var dialog = await DialogService.ShowAsync<NuevoClienteDialog>("Registrar Cliente", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data != null)
+        {
+            // Supongamos que el diálogo devuelve el nombre o el objeto cliente
+            _clienteNombre = result.Data.ToString();
+            // Opcional: recargar lista de clientes frecuentes
+            Snackbar.Add("Cliente registrado y seleccionado", Severity.Success);
+        }
     }
 
 
@@ -194,15 +414,19 @@
         if (itemExistente != null)
         {
             itemExistente.Cantidad += _cantidadAgregar;
+            itemExistente.Descuento = _descuentoAgregar;
         }
         else
         {
             // Usamos el constructor que "congela" el precio
-            _carrito.Add(new DetalleVenta(_productoSeleccionado, _cantidadAgregar));
+            var nuevoDetalle = new DetalleVenta(_productoSeleccionado, _cantidadAgregar, _descuentoAgregar);
+            _carrito.Add(nuevoDetalle);
         }
 
         _productoSeleccionado = null;
         _cantidadAgregar = 1;
+        _descuentoAgregar = 0;
+        StateHasChanged();
     }
 
     private void EliminarItem(DetalleVenta item) => _carrito.Remove(item);
@@ -230,13 +454,77 @@
 
         if (prod != null)
         {
-            _productoSeleccionado = prod;
-            AgregarAlCarrito();
-            Snackbar.Add($"Escaneado: {prod.Nombre}", Severity.Success);
+            // 1. Definimos los parámetros usando strings para evitar el error de la lambda
+            var parameters = new DialogParameters();
+            parameters.Add("Articulo", prod);
+            parameters.Add("CantidadInicial", 1);
+
+            var options = new DialogOptions
+            {
+                CloseButton = true,
+                MaxWidth = MaxWidth.ExtraSmall,
+                FullWidth = true,
+                BackdropClick = false // Obliga al vendedor a interactuar
+            };
+
+            // 2. Llamamos al diálogo (asegúrate que el nombre coincida con el archivo .razor)
+            try {
+
+                var dialog = await DialogService.ShowAsync<EdicionRapidaItemDialog>("Confirmar Producto", parameters, options);
+                var result = await dialog.Result;
+
+                if (!result.Canceled && result.Data != null)
+                {
+                    // 3. Leemos los datos ajustados (usando dynamic para facilidad)
+                    dynamic data = result.Data;
+                    int cant = data.CantidadSeleccionada;
+                    decimal precio = data.PrecioAplicado;
+
+                    // 4. Agregamos al carrito con los valores finales
+                    var itemExistente = _carrito.FirstOrDefault(x => x.Producto.Codigo == prod.Codigo);
+                    if (itemExistente != null)
+                    {
+                        itemExistente.Cantidad += cant;
+                        itemExistente.PrecioUnitario = precio; // Actualizamos por si hubo oferta
+                    }
+                    else
+                    {
+                        var nuevoDetalle = new DetalleVenta(prod, cant, 0) { PrecioUnitario = precio };
+                        _carrito.Add(nuevoDetalle);
+                    }
+
+                    StateHasChanged();
+                    Snackbar.Add($"{prod.Nombre} agregado.", Severity.Success);
+                }
+
+            } catch(Exception ex)
+            {
+                Console.WriteLine($"ERROR CRÍTICO AL LANZAR: {ex.Message}");
+                Snackbar.Add("Error interno al abrir el diálogo", Severity.Error);
+            }
+
+
+            
         }
         else
         {
             Snackbar.Add($"Código {sku} no reconocido", Severity.Warning);
+        }
+    }
+
+    // Método auxiliar para evitar duplicados y sumar cantidades
+    private void AgregarDetalleAlCarrito(DetalleVenta nuevoDetalle)
+    {
+        var existente = _carrito.FirstOrDefault(x => x.Producto.Codigo == nuevoDetalle.Producto.Codigo);
+        if (existente != null)
+        {
+            existente.Cantidad += nuevoDetalle.Cantidad;
+            // Si el precio cambió por una oferta manual, actualizamos o promediamos
+            existente.PrecioUnitario = nuevoDetalle.PrecioUnitario;
+        }
+        else
+        {
+            _carrito.Add(nuevoDetalle);
         }
     }
 
@@ -249,6 +537,7 @@
 
         var optionsStandard = new DialogOptions
         {
+            CloseOnEscapeKey = true,
             CloseButton = true,
             MaxWidth = MaxWidth.Small,
             FullWidth = true,

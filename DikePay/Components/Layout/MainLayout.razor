@@ -1,4 +1,5 @@
 ﻿@inherits LayoutComponentBase
+@using DikePay.Domain.Entities
 @using DikePay.Application.Interfaces.Services
 @using DikePay.Application.Interfaces
 @using DikePay.Shared.State
@@ -8,6 +9,7 @@
 @inject IAuthService AuthService
 @inject ISyncWorkerService SyncWorker
 @inject INetworkService ConnectivityService
+@inject INotificationService NotifService
 @implements IDisposable
 @inject AppState AppStateInstance
 @inject MudBlazor.ISnackbar SnackbarService
@@ -19,19 +21,10 @@
 
 <style>
     :root {
-        --safe-area-top: var(--maui-safe-area-inset-top, 32px);
+        /* Aumentamos el margen de seguridad superior para evitar solapamientos */
+        --safe-area-top: var(--maui-safe-area-inset-top, 40px); 
+        --safe-area-bottom: var(--maui-safe-area-inset-bottom, 24px);
     }
-
-    /* Estos estilos SOLO afectarán si el contenedor tiene la clase 'is-mobile' */
-    /* .is-mobile .status-bar-safe-area {
-        height: var(--safe-area-top);
-        background-color: #594AE2;
-        width: 100%;
-        position: fixed;
-        top: 0;
-        z-index: 1400;
-        display: block;
-    } */
 
     .is-mobile .status-bar-safe-area {
         height: var(--safe-area-top);
@@ -39,7 +32,7 @@
         width: 100%;
         position: fixed;
         top: 0;
-        z-index: 1400;
+        z-index: 100; /* Bajado de 1400 a 100 */
         display: block;
     }
 
@@ -47,24 +40,79 @@
         top: var(--safe-area-top) !important;
     }
 
+    /* Evita que el contenido de las páginas se meta debajo de la barra azul */
     .is-mobile .mud-main-content {
-        padding-top: calc(var(--mud-appbar-height) + var(--safe-area-top) + 8px) !important;
+        padding-top: calc(var(--mud-appbar-height) + var(--safe-area-top) + 16px) !important;
+        padding-bottom: 100px !important; /* Espacio para el nuevo menú inferior */
     }
 
-    .is-mobile .mud-drawer {
-        margin-top: var(--safe-area-top) !important;
-        height: calc(100% - var(--safe-area-top)) !important;
+    /* Estilo para que el menú inferior se vea como el de Global66 */
+    .bottom-nav-premium {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: calc(75px + var(--safe-area-bottom));
+        background: white;
+        display: flex;
+        justify-content: space-around;
+        align-items: flex-start;
+        padding-top: 12px;
+        border-top: 1px solid #EEE;
+        z-index: 100; /* Bajado de 1400 a 100 */
     }
+
+    .nav-item-custom {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        color: #94A3B8;
+        text-decoration: none;
+        width: 20%; 
+        background: none;
+        border: none;
+    }
+
+    .nav-item-custom.active {
+        color: #1E3A8A; /* Tu azul primario */
+    }
+
+    .nav-item-custom span {
+        font-size: 11px;
+        font-weight: 500;
+        margin-top: 4px;
+    }
+
+    /* Estilo para el Botón Circular de Venta */
+    .nav-item-central {
+        position: relative;
+        top: -25px; /* Lo sube para que sobresalga de la barra */
+        width: 20%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: none;
+        border: none;
+    }
+
+    .sale-fab {
+        background-color: #1E3A8A; /* Tu azul primario */
+        color: white;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.4);        
+        transition: transform 0.2s;
+    }
+
+    .sale-fab:active {
+        transform: scale(0.9);
+    }
+
 </style>
-
-
-@if (SyncService.EstaSincronizando)
-{
-    <MudAlert Severity="Severity.Info" Variant="Variant.Filled" Dense="true" Class="mb-4">
-        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-        Actualizando catálogo de productos...
-    </MudAlert>
-}
 
 <MudLayout Class="@_layoutClass">
 
@@ -75,7 +123,12 @@
 
     @* Barra Superior *@
     <MudAppBar Elevation="1" Color="Color.Primary">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+
+        @if (!_isMobile)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        }
+
         <MudText Typo="Typo.h6" Class="ml-3">DikePay</MudText>
         <MudSpacer />
         <MudToggleIconButton @bind-Toggled="@_isDarkMode"
@@ -88,9 +141,10 @@
         </MudBadge>
 
         @* Notificaciones *@
-        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" ActivationEvent="MouseEvent.LeftClick" PopoverClass="mud-popover-cascading"  >
+        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" ActivationEvent="MouseEvent.LeftClick" PopoverClass="mud-popover-cascading">
             <ActivatorContent>
-                <MudBadge Content="5" Color="Color.Error" Overlap="true" Class="mx-3">
+                @* Dinamizamos el Content y la Visibilidad *@
+                <MudBadge Content="@NotifService.NoLeidas" Color="Color.Error" Overlap="true" Class="mx-3" Visible="@(NotifService.NoLeidas > 0)">
                     <MudIconButton Icon="@Icons.Material.Outlined.Notifications" Color="Color.Inherit" />
                 </MudBadge>
             </ActivatorContent>
@@ -101,47 +155,38 @@
                             <MudText Typo="Typo.h6">Notificaciones</MudText>
                         </CardHeaderContent>
                         <CardHeaderActions>
-                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small">Marcar todo como leído</MudButton>
+                            @* Acción para marcar como leído *@
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small" OnClick="NotifService.MarcarComoLeidas">
+                                Marcar todo como leído
+                            </MudButton>
                         </CardHeaderActions>
                     </MudCardHeader>
                     <MudDivider />
-                    <MudList T="string" Clickable="true">
-                        <MudListItem Icon="@Icons.Material.Outlined.CheckCircle" IconColor="Color.Success">
-                            <div class="d-flex flex-column">
-                                <MudText Typo="Typo.body2"><b>Venta exitosa</b></MudText>
-                                <MudText Typo="Typo.caption">Factura #F001 generada correctamente.</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Hace 5 min</MudText>
-                            </div>
-                        </MudListItem>
-                        <MudDivider />
-                        <MudListItem Icon="@Icons.Material.Outlined.Warning" IconColor="Color.Warning">
-                            <div class="d-flex flex-column">
-                                <MudText Typo="Typo.body2"><b>Stock Bajo</b></MudText>
-                                <MudText Typo="Typo.caption">El artículo "Laptop Pro" tiene menos de 3 unidades.</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Hace 2 horas</MudText>
-                            </div>
-                        </MudListItem>
-                        <MudDivider />
-                        <MudListItem Icon="@Icons.Material.Outlined.ErrorOutline" IconColor="Color.Error">
-                            <div class="d-flex flex-column">
-                                <MudText Typo="Typo.body2"><b>Error de SUNAT</b></MudText>
-                                <MudText Typo="Typo.caption">El documento #F002 fue rechazado por el servidor.</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Hace 1 día</MudText>
-                            </div>
-                        </MudListItem>
-                        <MudDivider />
-                        <MudListItem Icon="@Icons.Material.Outlined.PersonAdd" IconColor="Color.Info">
-                            <div class="d-flex flex-column">
-                                <MudText Typo="Typo.body2"><b>Nuevo Usuario</b></MudText>
-                                <MudText Typo="Typo.caption">Se ha registrado el vendedor: Yahaira Vela.</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Hace 2 días</MudText>
-                            </div>
-                        </MudListItem>
-                    </MudList>
-                    <MudDivider />
-                    <div class="pa-2 d-flex justify-center">
-                        <MudButton Variant="Variant.Text" FullWidth="true" Color="Color.Primary">Ver todas las notificaciones</MudButton>
-                    </div>
+            
+                    @if (NotifService.Notificaciones.Any())
+                    {
+                        <MudList T="string">
+                            @foreach (var notif in NotifService.Notificaciones)
+                            {
+                                <MudListItem Icon="@(notif.Tipo == TipoNotificacion.Error ? Icons.Material.Filled.Error : Icons.Material.Filled.Info)"
+                                             IconColor="@(notif.Tipo == TipoNotificacion.Error ? Color.Error : Color.Info)">
+                                    <div class="d-flex flex-column">
+                                        <MudText Typo="Typo.body2" Style="font-weight: bold;">@notif.Titulo</MudText>
+                                        <MudText Typo="Typo.caption">@notif.Mensaje</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@notif.Fecha.ToShortTimeString()</MudText>
+                                    </div>
+                                </MudListItem>
+                                <MudDivider />
+                            }
+                        </MudList>
+                    }
+                    else
+                    {
+                        <div class="pa-8 d-flex flex-column align-center justify-center">
+                            <MudIcon Icon="@Icons.Material.Outlined.NotificationsOff" Color="Color.Default" Style="font-size: 3rem;" />
+                            <MudText Typo="Typo.body2" Class="mt-2" Color="Color.Secondary">No tienes notificaciones nuevas</MudText>
+                        </div>
+                    }
                 </MudCard>
             </ChildContent>
         </MudMenu>
@@ -153,7 +198,7 @@
                 <MudAvatar Color="Color.Secondary">@ObtenerIniciales()</MudAvatar>
             </ActivatorContent>
             <ChildContent>
-                <div class="pa-4 d-flex flex-column align-center" style="min-width: 150px;">
+                <div class="pa-4 d-flex flex-column align-center" style="min-width: 200px;">
                     <MudAvatar Color="Color.Secondary" Style="height:60px; width:60px;">@ObtenerIniciales()</MudAvatar>
                     <MudText Typo="Typo.body1" Class="mt-2" Style="font-weight: bold;">@UsuarioNombre</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@UsuarioEmail</MudText>
@@ -178,7 +223,51 @@
         <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-6">
             @Body
         </MudContainer>
+
+        @* Espacio extra al final para que la barra no tape el contenido en móvil *@
+        @if (_isMobile)
+        {
+            <div style="height: 65px;"></div>
+        }
     </MudMainContent>
+
+    @* BARRA DE NAVEGACIÓN INFERIOR PARA MÓVILES *@
+    @if (_isMobile)
+{
+    <div class="bottom-nav-premium">
+        @* 1. Inicio *@
+        <button class="nav-item-custom @(GetActiveClass("/Inicio"))" @onclick="@(() => Navigation.NavigateTo("/Inicio"))">
+            <MudIcon Icon="@Icons.Material.Filled.Home" Size="Size.Medium" />
+            <span>Inicio</span>
+        </button>
+
+        @* 2. Inventario *@
+        <button class="nav-item-custom @(GetActiveClass("/inventario"))" @onclick="@(() => Navigation.NavigateTo("/inventario"))">
+            <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Medium" />
+            <span>Stock</span>
+        </button>
+
+        @* 3. BOTÓN CENTRAL: NUEVA VENTA *@
+        <button class="nav-item-central" @onclick="@(() => Navigation.NavigateTo("/facturacion/dashboard"))">
+            <div class="sale-fab">
+                <MudIcon Icon="@Icons.Material.Filled.AddShoppingCart" Size="Size.Large" />
+            </div>
+        </button>
+
+        @* 4. Historial/Comandas (u otra opción) *@
+        <button class="nav-item-custom @(GetActiveClass("/comanda"))" @onclick="@(() => Navigation.NavigateTo("/comanda"))">
+            <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Medium" />
+            <span>Comandas</span>
+        </button>
+
+        @* 5. Ajustes *@
+        <button class="nav-item-custom @(GetActiveClass("/configuracion"))" @onclick="@(() => Navigation.NavigateTo("/configuracion/articulos"))">
+            <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Medium" />
+            <span>Ajustes</span>
+        </button>
+    </div>
+}
+    
 </MudLayout>
 
 @code {
@@ -220,8 +309,14 @@
         _isDarkMode = AppInfo.RequestedTheme == AppTheme.Dark;
 
         AppStateInstance.OnChange += HandleStateChanged;
+
+        // Suscripciones al SYNC
+        SyncService.OnSyncStarted += HandleSyncStarted;
         SyncService.OnSyncCompleted += HandleSyncSuccess; // Suscripción al éxito de la sincronización
         SyncService.OnSyncError += HandleSyncError;
+
+        // 1. Suscripción al cambio de notificaciones
+        NotifService.OnChange += HandleNotifStateChanged;
 
         AppStateInstance.SetConnectivity(ConnectivityService.HasInternet); 
         ConnectivityService.ConnectivityChanged += HandleConnectivityChanged;
@@ -234,21 +329,17 @@
                     }
                     catch (Exception) { /* Loguear error de sync silencioso */ }
                 });
+        
+    }
 
-        // Nos suscribimos al evento
-        // SyncWorker.OnSyncCompleted += (mensaje) =>
-        // {
-        //     // ¡OJO SENIOR!: Los eventos de fondo vienen en otro hilo,
-        //     // hay que pasarlos al hilo de la UI para que MudBlazor no explote.
-        //     MainThread.BeginInvokeOnMainThread(() =>
-        //     {
-        //         Snackbar.Add(mensaje, Severity.Success);
-        //         StateHasChanged();
-        //     });
-        // };
+    private void HandleSyncStarted() 
+    {
+        InvokeAsync(StateHasChanged);
+    }
 
-        // SyncWorker.Start();
-
+    private void HandleNotifStateChanged() 
+    {
+        InvokeAsync(StateHasChanged);
     }
 
     private void HandleStateChanged() => InvokeAsync(StateHasChanged);
@@ -258,8 +349,10 @@
         AppStateInstance.OnChange -= HandleStateChanged;
         ConnectivityService.ConnectivityChanged -= HandleConnectivityChanged;
         // ¡No olvides desuscribirte para evitar fugas de memoria!
+        SyncService.OnSyncStarted -= HandleSyncStarted;
         SyncService.OnSyncCompleted -= HandleSyncSuccess;
         SyncService.OnSyncError -= HandleSyncError;
+        NotifService.OnChange -= HandleNotifStateChanged;
     }
 
     private void HandleConnectivityChanged(bool isConnected) { 
@@ -277,33 +370,52 @@
     {
         _drawerOpen = !_drawerOpen;
     }
-
+   
     private MudTheme _dikePayTheme = new MudTheme()
     {
         PaletteLight = new PaletteLight()
         {
-            Primary = "#594AE2",
-            Secondary = "#00C853",
-            AppbarBackground = "#594AE2",
-            Background = "#F5F5F9", // Un gris muy suave para el fondo
-            Surface = "#FFFFFF"
+            Primary = "#1E3A8A",          // Azul Marino (Confianza y Seriedad)
+            Secondary = "#B45309",        // Ámbar/Dorado (Ventas y Éxito)
+            AppbarBackground = "#1E3A8A",
+            AppbarText = "#FFFFFF",
+            Background = "#F8FAFC",       // Gris azulado muy claro (Descansa la vista)
+            Surface = "#FFFFFF",
+            DrawerBackground = "#FFFFFF",
+            DrawerText = "#1E293B",
+            Success = "#10B981",          // Verde Esmeralda para ventas cerradas
+            Info = "#3B82F6",
+            Warning = "#F59E0B",
+            Error = "#EF4444",
+            LinesDefault = "#E2E8F0",     // Bordes más suaves
+            TableStriped = "#F1F5F9"
         },
         PaletteDark = new PaletteDark()
         {
-            Primary = "#9E93FF",         // Un violeta más claro para que resalte en negro
-            Secondary = "#00E676",
-            AppbarBackground = "#1A1A27",
-            Background = "#121212",      // Color base de Android Dark Mode
-            Surface = "#1E1E2D",         // Color para las tarjetas (MudPaper)
-            DrawerBackground = "#1A1A27",
-            TextPrimary = "#E3E3E3",
-            ActionDefault = "#ADADB1"
+            Primary = "#3B82F6",          // Azul más brillante para modo oscuro
+            Secondary = "#F59E0B",
+            AppbarBackground = "#0F172A", // Azul oscuro casi negro
+            Background = "#020617",       // Fondo profundo
+            Surface = "#0F172A",          // Tarjetas elevadas
+            DrawerBackground = "#0F172A",
+            TextPrimary = "#F1F5F9",
+            TextSecondary = "#94A3B8",
+            ActionDefault = "#64748B"
         },
         LayoutProperties = new LayoutProperties()
         {
-            DefaultBorderRadius = "12px", // Bordes un poco más modernos
-        }
+            DefaultBorderRadius = "12px",    // Menos redondeado para verse más corporativo
+        },
     };
+
+    private string GetActiveClass(string page)
+    {
+        var relativePath = "/" + Navigation.ToBaseRelativePath(Navigation.Uri).ToLower();
+        // Si estamos en la raíz o la ruta coincide
+        if (page == "/Inicio" && relativePath == "/") return "active";
+        return relativePath.StartsWith(page.ToLower()) ? "active" : "";
+    }
+
 
     private async Task CerrarSesion(){
 

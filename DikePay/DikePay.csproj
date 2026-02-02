@@ -30,7 +30,7 @@
         <ApplicationVersion>1</ApplicationVersion>
 
         <!-- To develop, package, and publish an app to the Microsoft Store, see: https://aka.ms/MauiTemplateUnpackaged -->
-        <WindowsPackageType>None</WindowsPackageType>
+        <WindowsPackageType>MSIX</WindowsPackageType>
 
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">15.0</SupportedOSPlatformVersion>
@@ -60,9 +60,11 @@
     <ItemGroup>
         <PackageReference Include="BarcodeLib" Version="3.1.5" />
         <PackageReference Include="ClosedXML" Version="0.105.0" />
+        <PackageReference Include="CommunityToolkit.Maui" Version="12.3.0" />
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+        <PackageReference Include="Hardware.Info" Version="101.1.1.1" />
         <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="10.0.1" />
-        <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
+        <PackageReference Include="Microsoft.Maui.Controls" Version="10.0.30" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="10.0.0" />
         <PackageReference Include="MudBlazor" Version="8.15.0" />

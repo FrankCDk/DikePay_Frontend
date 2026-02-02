@@ -1,22 +1,102 @@
-﻿<MudNavMenu>
+﻿@using DikePay.Application.Interfaces.Services
+@inject ISyncService SyncService
+@implements IDisposable
+
+<MudNavMenu>
     <div class="pa-4">
         <MudText Typo="Typo.subtitle2" Color="Color.Primary" Style="font-weight: bold;">MENÚ PRINCIPAL</MudText>
     </div>
 
-    <MudNavLink href="/dashboard" Icon="@Icons.Material.Outlined.Dashboard">Dashboard</MudNavLink>
-
-    <MudNavLink href="/facturacion/ventas" Icon="@Icons.Material.Outlined.PointOfSale">Venta</MudNavLink>
-
-    <MudNavLink href="/restaurante/toma-comanda" Icon="@Icons.Material.Outlined.PointOfSale">Comanda</MudNavLink>
-
-    <MudNavLink href="/inventario" Icon="@Icons.Material.Outlined.Inventory2">Inventario</MudNavLink>
-
-    <MudNavLink href="/facturacion/consola-documentos" Icon="@Icons.Material.Outlined.Description">Consola de Documentos</MudNavLink>
-
-    <MudNavGroup Title="Configuración" Icon="@Icons.Material.Outlined.Settings" Expanded="false">
-        <MudNavLink href="/configuracion/articulos" Icon="@Icons.Material.Outlined.Label">Artículos</MudNavLink>
-        <MudNavLink href="/configuracion/usuarios" Icon="@Icons.Material.Outlined.People">Usuarios</MudNavLink>
+    <MudNavLink href="/Inicio" Icon="@Icons.Material.Outlined.Home">Inicio</MudNavLink>
+    <MudNavLink href="/test-voice" Icon="@Icons.Material.Outlined.Home">Prueba de voz</MudNavLink>
+    
+    <MudNavGroup Title="Operaciones" Icon="@Icons.Material.Filled.BusinessCenter" Expanded="false">
+        <MudNavLink href="/facturacion/dashboard" Icon="@Icons.Material.Filled.LocalMall">Venta</MudNavLink>
+        <MudNavLink href="/inventario" Icon="@Icons.Material.Outlined.Inventory2">Inventario</MudNavLink>
+        <MudNavLink href="/facturacion/consola-documentos" Icon="@Icons.Material.Outlined.Description">Consola de Documentos</MudNavLink>
     </MudNavGroup>
 
-    <MudNavLink href="/almacenamiento" Icon="@Icons.Material.Filled.Storage">Almacenamiento</MudNavLink>
+    <MudNavGroup Title="Restaurante" Icon="@Icons.Material.Filled.Storefront" Expanded="false">
+        <MudNavLink href="/restaurante/toma-comanda" Icon="@Icons.Material.Filled.ReceiptLong">Comanda</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Metricas" Icon="@Icons.Material.Outlined.DisplaySettings" Expanded="false">
+        <MudNavLink href="/almacenamiento" Icon="@Icons.Material.Filled.SdStorage">Almacenamiento</MudNavLink>
+        <MudNavLink href="/dashboard" Icon="@Icons.Material.Filled.Analytics">Dashboard</MudNavLink>
+        <MudNavLink href="/analisis-sistema" Icon="@Icons.Material.Filled.Terminal">Analisis</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Configuración" Icon="@Icons.Material.Filled.Settings" Expanded="false">
+        <MudNavLink href="/configuracion/articulos" Icon="@Icons.Material.Outlined.Label">Artículos</MudNavLink>
+    </MudNavGroup>
+
+     @* --- SECCIÓN DE ESTADO DE SINCRONIZACIÓN --- *@
+    <MudDivider Class="my-4" />
+
+    <div class="pa-4 mt-auto">
+        @if (SyncService.EstaSincronizando)
+        {
+            @* ESTADO 1: PROCESANDO *@
+            <div class="d-flex align-center">
+                <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" Class="mr-3" />
+                <div class="d-flex flex-column">
+                    <MudText Typo="Typo.caption" Style="font-weight: bold;">Sincronizando...</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Actualizando catálogo</MudText>
+                </div>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(SyncService.UltimoError))
+        {
+            @* ESTADO 2: FALLIDO *@
+            <div class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Outlined.CloudOff" Color="Color.Error" Size="Size.Small" Class="mr-3" />
+                <div class="d-flex flex-column">
+                    <MudText Typo="Typo.caption" Color="Color.Error" Style="font-weight: bold;">Sincronización fallida</MudText>
+                    <MudText Typo="Typo.caption">@SyncService.UltimoError</MudText>
+                </div>
+                @* Botón pequeño para reintentar si quieres *@
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" OnClick="SyncService.SincronizarTodoAsync" />
+            </div>
+        }
+        else
+        {
+            @* ESTADO 3: ÉXITO *@
+            <div class="d-flex align-center" style="opacity: 0.7;">
+                <MudIcon Icon="@Icons.Material.Outlined.CloudDone" Color="Color.Success" Size="Size.Small" Class="mr-3" />
+                <div class="d-flex flex-column">
+                    <MudText Typo="Typo.caption" Style="font-weight: bold;">Sistema al día</MudText>
+                    <MudText Typo="Typo.caption">Datos actualizados</MudText>
+                </div>
+            </div>
+        }
+    </div>
+
 </MudNavMenu>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Nos suscribimos a cambios del servicio de sincronización para refrescar el menú
+        SyncService.OnSyncStarted += RefreshUI;
+        SyncService.OnSyncCompleted += HandleSyncCompleted;
+        SyncService.OnSyncError += HandleSyncError;
+    }
+
+    private void HandleSyncCompleted(string mensaje) => RefreshUI();
+    private void HandleSyncError(string mensaje) => RefreshUI();
+
+    private void RefreshUI()
+    {
+        // Forzamos el renderizado en el hilo de UI
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        // Limpieza de eventos
+        SyncService.OnSyncStarted -= RefreshUI;
+        SyncService.OnSyncCompleted -= HandleSyncCompleted;
+        SyncService.OnSyncError -= HandleSyncError;
+    }
+
+}

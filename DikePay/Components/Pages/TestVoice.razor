@@ -1,0 +1,89 @@
+﻿@page "/test-voice"
+@using DikePay.Services.Implementations
+@inject VoiceCommandService VoiceService
+@implements IDisposable
+
+<div class="container mt-4 text-center">
+    <h3>Prueba de Voz DikePay</h3>
+    <hr />
+
+    <div class="card p-4 shadow-sm">
+        <div class="mb-3">
+            @if (isListening)
+            {
+                <span class="badge bg-danger animate-pulse">🔴 Escuchando...</span>
+            }
+            else
+            {
+                <span class="badge bg-secondary">⚪ Micrófono Apagado</span>
+            }
+        </div>
+
+        <div class="d-flex justify-content-center gap-3">
+            <button class="btn btn-primary btn-lg"
+                    @onclick="StartListen"
+                    disabled="@isListening">
+                🎤 Iniciar
+            </button>
+
+            <button class="btn btn-danger btn-lg"
+                    @onclick="StopListen"
+                    disabled="@(!isListening)">
+                🛑 Detener
+            </button>
+        </div>
+
+        <div class="mt-4 p-3 bg-light border rounded" style="min-height: 100px;">
+            <strong>Resultado:</strong>
+            <p class="fs-4">@VoiceService.RecognitionText</p>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool isListening = false;
+    private CancellationTokenSource cts = new();
+
+    protected override void OnInitialized()
+    {
+        // No es lo más limpio, pero para la prueba forzaremos
+        // una actualización cada vez que el texto cambie
+    }
+
+    private async Task StartListen()
+    {
+        isListening = true;
+        VoiceService.RecognitionText = "Escuchando...";
+
+        // Ejecutamos en un hilo separado para que no bloquee la UI
+        _ = Task.Run(async () =>
+        {
+            await VoiceService.StartListening(cts.Token);
+        });
+
+        // Creamos un bucle de refresco para la prueba
+        _ = RefrescarUI();
+    }
+
+    private async Task RefrescarUI()
+    {
+        while (isListening)
+        {
+            await Task.Delay(500); // Refresca cada medio segundo
+            StateHasChanged();
+        }
+    }
+
+    private async Task StopListen()
+    {
+        isListening = false;
+        await VoiceService.StopListening(cts.Token);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        cts.Cancel();
+        cts.Dispose();
+    }
+}

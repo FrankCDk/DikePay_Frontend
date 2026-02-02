@@ -1,6 +1,7 @@
 ﻿@using MudBlazor
 @page "/configuracion/articulos"
 @using DikePay.Domain.Entities
+@using DikePay.Application.DTOs.Articulos.Request
 @using DikePay.Application.Interfaces.Services
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -30,12 +31,12 @@
 
     <MudTable T="Articulo" ServerData="@CargarArticulos" @ref="_table" Hover="true" Bordered="true" Striped="true" Elevation="1">
         <HeaderContent>
-            <MudTh>Código</MudTh>
-            <MudTh>Nombre</MudTh>
-            <MudTh>Precio</MudTh>
+            <MudTh>CÓDIGO</MudTh>
+            <MudTh>NOMBRE</MudTh>
+            <MudTh>PRECIO</MudTh>
             <MudTh>SKU</MudTh>
-            <MudTh>Stock</MudTh>
-            <MudTh Style="text-align: right;">Acciones</MudTh>
+            <MudTh>STOCK</MudTh>
+            <MudTh Style="text-align: right;">ACCIONES</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Codigo">@context.Codigo</MudTd>
@@ -46,7 +47,6 @@
             <MudTd Style="text-align: center;">
                 <MudIconButton Icon="@Icons.Material.Outlined.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditarArticulo(context))" />
                 <MudIconButton Icon="@Icons.Material.Outlined.QrCode" Color="Color.Info" Size="Size.Small" OnClick="@(() => MostrarBarcode(context))" Disabled="@(string.IsNullOrEmpty(context.CodigoSku))" />
-                <MudIconButton Icon="@Icons.Material.Outlined.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => EliminarArticulo(context))" />
             </MudTd>
         </RowTemplate>
         <NoRecordsContent>
@@ -81,13 +81,13 @@
 
     private async Task CrearNuevoArticulo()
     {
-        var nuevoArticulo = new Articulo();
+        var nuevoArticulo = new ArticuloCreateDto();
         var parameters = new DialogParameters { ["Articulo"] = nuevoArticulo };
 
-        var dialog = await DialogService.ShowAsync<DikePay.Components.Shared.ArticuloFormDialog>("Nuevo Artículo", parameters);
+        var dialog = await DialogService.ShowAsync<ArticuloFormDialog>("Nuevo Artículo", parameters);
         var result = await dialog.Result;
 
-        if (!result.Canceled && result.Data is Articulo articuloAGuardar)
+        if (!result.Canceled && result.Data is ArticuloCreateDto articuloAGuardar)
         {
             var exito = await ArticuloService.CrearArticuloAsync(articuloAGuardar);
             if (exito)
@@ -106,34 +106,30 @@
     {
         // Tip Senior: Pasa una copia del objeto al diálogo para evitar que la UI
         // se actualice si el usuario cancela (si usas Binding directo)
-        var parameters = new DialogParameters { ["Articulo"] = articulo };
-        var dialog = await DialogService.ShowAsync<DikePay.Components.Shared.ArticuloFormDialog>("Editar Artículo", parameters);
+
+        ArticuloCreateDto editArticulo = new ArticuloCreateDto
+        {
+            Codigo = articulo.Codigo,
+            CodigoSku = articulo.CodigoSku,
+            Nombre = articulo.Nombre,
+            //Descripcion = articulo.Descripcion,
+            Precio = articulo.Precio,
+            Stock = articulo.Stock,
+            StockMinimo = articulo.StockMinimo
+        };
+
+        var parameters = new DialogParameters { ["Articulo"] = editArticulo };
+        var dialog = await DialogService.ShowAsync<ArticuloFormDialog>("Editar Artículo", parameters);
         var result = await dialog.Result;
 
         if (!result.Canceled)
         {
-            var exito = await ArticuloService.ActualizarArticuloAsync(articulo);
+            var exito = await ArticuloService.ActualizarArticuloAsync(editArticulo);
             if (exito)
             {
                 Snackbar.Add("Artículo actualizado!", Severity.Success);
                 await RefrescarTabla();
             }
-        }
-    }
-
-    private async Task EliminarArticulo(Articulo articulo)
-    {
-        bool? result = await DialogService.ShowMessageBox(
-            "Eliminar Artículo",
-            $"¿Estás seguro de que deseas eliminar el artículo '{articulo.Nombre}'?",
-            yesText: "Sí", cancelText: "No");
-
-        if (result == true)
-        {
-            // Nota: Aquí deberías tener un método en el Service para borrar.
-            // Por ahora simulamos el éxito.
-            Snackbar.Add("Funcionalidad de eliminar pendiente en Service.", Severity.Info);
-            await RefrescarTabla();
         }
     }
 

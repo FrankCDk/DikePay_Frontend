@@ -1,56 +1,116 @@
-﻿@using DikePay.Domain.Entities
+﻿@using System.ComponentModel.DataAnnotations
+@using DikePay.Application.DTOs.Articulos.Request
 @using MudBlazor
+@using MudBlazor.Components
 @inject MudBlazor.IDialogService DialogService
 @inject MudBlazor.ISnackbar Snackbar
-@namespace DikePay.Components.Shared
+@namespace DikePay.Components.Pages.Articulos
 
 <MudDialog>
     <TitleContent>
-        <MudText Typo="Typo.h6">@_dialogTitle</MudText>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Inventory" Class="mr-2 mb-n1" />
+            @_dialogTitle
+        </MudText>
     </TitleContent>
     <DialogContent>
         <MudForm Model="@Articulo" @ref="_form">
-            <MudTextField @bind-Value="Articulo.Nombre" Label="Nombre del Artículo" Required="true" RequiredError="El nombre es requerido." />
-            <MudNumericField @bind-Value="Articulo.Precio" Label="Precio" Required="true" RequiredError="El precio es requerido." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AttachMoney" Culture='System.Globalization.CultureInfo.GetCultureInfo("es-PE")' />
-            <MudNumericField @bind-Value="Articulo.Stock" Label="Stock Inicial" Required="true" RequiredError="El stock es requerido." />
-            <MudTextField @bind-Value="Articulo.CodigoSku" Label="Código SKU" HelperText="Dejar vacío para generar automáticamente" />
+            <MudGrid Spacing="2">
+                @* Sección de Identificación *@
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string"
+                                  Label="Código Interno"
+                                  Variant="Variant.Outlined"
+                                  @bind-Value="Articulo.Codigo"
+                                  For="@(() => Articulo.Codigo)"
+                                  Placeholder="EJ: ART-001"
+                                  Immediate="true" />
+                </MudItem>
 
-            @if (!string.IsNullOrEmpty(Articulo.CodigoSku))
-            {
-                <MudButton Class="mt-4" StartIcon="@Icons.Material.Filled.QrCode" Color="Color.Info" Variant="Variant.Text" OnClick="ShowBarcodePreview">
-                    Ver Código de Barras
-                </MudButton>
-            }
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string"
+                                  Label="Código SKU"
+                                  Variant="Variant.Outlined"
+                                  @bind-Value="Articulo.CodigoSku"
+                                  For="@(() => Articulo.CodigoSku)"
+                                  ReadOnly="@(!string.IsNullOrEmpty(Articulo.CodigoSku) && _dialogTitle.Contains("Editar"))"
+                                  HelperText="Código de barras único"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@Icons.Material.Filled.QrCode"
+                                  OnAdornmentClick="ShowBarcodePreview" />
+                </MudItem>
+
+                @* Información General *@
+                <MudItem xs="12">
+                    <MudTextField T="string"
+                                  Label="Nombre del Producto"
+                                  Variant="Variant.Outlined"
+                                  @bind-Value="Articulo.Nombre"
+                                  For="@(() => Articulo.Nombre)"
+                                  Counter="200"
+                                  MaxLength="200"
+                                  Immediate="true" />
+                </MudItem>
+
+                @* Precios y Stock (Usamos NumericField para mejor UX en móviles) *@
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="decimal"
+                                     Label="Precio de Venta"
+                                     Variant="Variant.Outlined"
+                                     @bind-Value="Articulo.Precio"
+                                     For="@(() => Articulo.Precio)"
+                                     Format="N2"
+                                     Culture="@_enUs"
+                                     Adornment="Adornment.Start"
+                                     AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
+                </MudItem>
+
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="decimal"
+                                     Label="Stock Inicial"
+                                     Variant="Variant.Outlined"
+                                     @bind-Value="Articulo.Stock"
+                                     For="@(() => Articulo.Stock)"
+                                     Format="N4"
+                                     Culture="@_enUs"
+                                     HelperText="Cantidad actual" />
+                </MudItem>
+
+                <MudItem xs="12" sm="4">
+                    <MudNumericField T="decimal"
+                                     Label="Stock Mínimo"
+                                     Variant="Variant.Outlined"
+                                     @bind-Value="Articulo.StockMinimo"
+                                     For="@(() => Articulo.StockMinimo)"
+                                     Format="N4"
+                                     Culture="@_enUs"
+                                     HelperText="Alerta de reposición" />
+                </MudItem>
+            </MudGrid>
         </MudForm>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancelar</MudButton>
-        <MudButton Color="Color.Primary" OnClick="Submit" Variant="Variant.Filled">Guardar</MudButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Text" Class="px-6">Cancelar</MudButton>
+        <MudButton Color="Color.Primary"
+                   OnClick="Submit"
+                   Variant="Variant.Filled"
+                   Class="px-10 rounded-pill">Guardar Artículo</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
-    
-    [CascadingParameter]
-    private IMudDialogInstance MudDialog { get; set; } = default!;
-
-    // El artículo que estamos editando/creando
-    [Parameter] public Articulo Articulo { get; set; } = new();
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public ArticuloCreateDto Articulo { get; set; } = new();
 
     private MudForm _form = default!;
     private string _dialogTitle = "Artículo";
 
+    // Configuramos una cultura para asegurar que el punto sea decimal
+    private System.Globalization.CultureInfo _enUs = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+
     protected override void OnInitialized()
     {
-        _dialogTitle = Articulo.Codigo == "" ? "Nuevo Artículo" : $"Editar Artículo (CODIGO: {Articulo.Codigo})";
-        // Si es un nuevo artículo y el SKU está vacío, lo generamos automáticamente
-        if (Articulo.Codigo == "" && string.IsNullOrEmpty(Articulo.CodigoSku))
-        {
-            // Esto es solo un ejemplo. En un sistema real, harías una llamada a la API
-            // o a un servicio para obtener el siguiente ID y construir un SKU único.
-            // Por ahora, lo dejamos vacío para que el usuario pueda escribirlo.
-            // Si el usuario deja vacío, lo generamos al guardar si no lo puso.
-        }
+        _dialogTitle = string.IsNullOrWhiteSpace(Articulo.Codigo) ? "Nuevo Artículo" : $"Editar Artículo";
     }
 
     private async Task Submit()
@@ -58,16 +118,18 @@
         await _form.Validate();
         if (_form.IsValid)
         {
-            // Aquí podrías generar el SKU si el usuario no lo puso
-            if (string.IsNullOrEmpty(Articulo.CodigoSku))
+            // Lógica Senior: Si el SKU es obligatorio en el DTO pero lo generamos nosotros,
+            // debemos asegurarnos de que tenga valor ANTES de que el servicio lo procese.
+            if (string.IsNullOrWhiteSpace(Articulo.CodigoSku))
             {
-                Articulo.CodigoSku = $"SKU-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
+                Articulo.CodigoSku = $"SKU-{Guid.NewGuid().ToString()[..8].ToUpper()}";
             }
+
             MudDialog.Close(DialogResult.Ok(Articulo));
         }
         else
         {
-            Snackbar.Add("Por favor, corrige los errores del formulario.", Severity.Error);
+            Snackbar.Add("Revisa los campos obligatorios marcados en rojo.", Severity.Warning);
         }
     }
 
@@ -78,11 +140,11 @@
         if (!string.IsNullOrEmpty(Articulo.CodigoSku))
         {
             var parameters = new DialogParameters { ["CodigoSku"] = Articulo.CodigoSku };
-            await DialogService.ShowAsync<DikePay.Components.Shared.BarcodeDisplayDialog>($"Código de Barras para {Articulo.Nombre}", parameters);
+            await DialogService.ShowAsync<DikePay.Components.Shared.BarcodeDisplayDialog>($"Código: {Articulo.CodigoSku}", parameters);
         }
         else
         {
-            Snackbar.Add("El artículo no tiene un Código SKU para mostrar.", Severity.Warning);
+            Snackbar.Add("Asigna un código SKU para visualizar el código de barras.", Severity.Info);
         }
     }
 }

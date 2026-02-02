@@ -1,7 +1,7 @@
 ﻿@using Microsoft.Maui.Devices
 @inherits LayoutComponentBase
 
-<MudThemeProvider />
+<MudThemeProvider Theme="_dikePayTheme" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -38,7 +38,6 @@
 
 <MudLayout>
     <MudMainContent>
-        @* Solo renderizamos la Safe Area si NO es Windows ni Mac *@
         @if (DeviceInfo.Current.Platform != DevicePlatform.WinUI && 
              DeviceInfo.Current.Platform != DevicePlatform.MacCatalyst)
         {
@@ -50,3 +49,42 @@
         </div>
     </MudMainContent>
 </MudLayout>
+
+@code {
+    private MudTheme _dikePayTheme = new MudTheme()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#1E3A8A",          // Azul Marino (Confianza y Seriedad)
+            Secondary = "#B45309",        // Ámbar/Dorado (Ventas y Éxito)
+            AppbarBackground = "#1E3A8A",
+            AppbarText = "#FFFFFF",
+            Background = "#F8FAFC",       // Gris azulado muy claro (Descansa la vista)
+            Surface = "#FFFFFF",
+            DrawerBackground = "#FFFFFF",
+            DrawerText = "#1E293B",
+            Success = "#10B981",          // Verde Esmeralda para ventas cerradas
+            Info = "#3B82F6",
+            Warning = "#F59E0B",
+            Error = "#EF4444",
+            LinesDefault = "#E2E8F0",     // Bordes más suaves
+            TableStriped = "#F1F5F9"
+        },
+        PaletteDark = new PaletteDark()
+        {
+            Primary = "#3B82F6",          // Azul más brillante para modo oscuro
+            Secondary = "#F59E0B",
+            AppbarBackground = "#0F172A", // Azul oscuro casi negro
+            Background = "#020617",       // Fondo profundo
+            Surface = "#0F172A",          // Tarjetas elevadas
+            DrawerBackground = "#0F172A",
+            TextPrimary = "#F1F5F9",
+            TextSecondary = "#94A3B8",
+            ActionDefault = "#64748B"
+        },
+        LayoutProperties = new LayoutProperties()
+        {
+            DefaultBorderRadius = "12px",    // Menos redondeado para verse más corporativo
+        },
+    };
+}

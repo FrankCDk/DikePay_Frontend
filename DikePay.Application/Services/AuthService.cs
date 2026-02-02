@@ -1,7 +1,10 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
+using DikePay.Application.Common;
+using DikePay.Application.DTOs.Auth;
 using DikePay.Application.DTOs.Auth.Response;
 using DikePay.Application.Interfaces;
+using DikePay.Application.Interfaces.Maui;
 using DikePay.Application.Interfaces.Services;
 using DikePay.Shared.State;
 
@@ -13,13 +16,20 @@ namespace DikePay.Application.Services
         private readonly HttpClient _httpClient;
         private readonly INetworkService _connectivityService;
         private readonly IAuthStorage _authStorage;
+        private readonly IDeviceInfoService _deviceInfo;
 
-        public AuthService(AppState appState, IHttpClientFactory httpClientFactory, INetworkService connectivityService, IAuthStorage authStorage)
+        public AuthService(
+            AppState appState, 
+            IHttpClientFactory httpClientFactory, 
+            INetworkService connectivityService, 
+            IAuthStorage authStorage,
+            IDeviceInfoService deviceInfoService)
         {
             _appState = appState;
             _httpClient = httpClientFactory.CreateClient("DikePayApi");
             _connectivityService = connectivityService;
             _authStorage = authStorage;
+            _deviceInfo = deviceInfoService;
         }
 
         public async Task<bool> LoginAsync(string user, string password)
@@ -56,6 +66,7 @@ namespace DikePay.Application.Services
                         await _authStorage.SaveValueAsync("last_user", user);
                         await _authStorage.SaveValueAsync("last_pass_hash", password);
                         await _authStorage.SaveValueAsync("user_data", JsonSerializer.Serialize(result));
+                        await _authStorage.SaveValueAsync("jwt_token", result.Token);
 
                         SetAppState(result);
                         return true;
@@ -136,5 +147,63 @@ namespace DikePay.Application.Services
             }
             return false;
         }
+
+        public async Task<bool> LoginWithQrCodeAsync(string authCode)
+        {
+            var request = new QrLoginRequest
+            {
+                AuthCode = authCode,
+                DeviceName = _deviceInfo.GetDeviceName()
+            };
+
+            var response = await _httpClient.PostAsJsonAsync("auth/login-qr", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
+
+                // Guardamos el JWT que nos devolvió el servidor
+                await _authStorage.SaveValueAsync("jwt_token", result.Token);
+                return true;
+            }
+
+            return false;
+        }
+
+        public async Task<ServiceResponse<string>> GenerateMobileAccessCodeAsync()
+        {
+            try
+            {
+
+                var token = await _authStorage.GetValueAsync("jwt_token");
+
+                if (string.IsNullOrEmpty(token))
+                    return ServiceResponse<string>.Fail("No hay una sesión activa.");
+
+                // 2. Configuramos el header para esta petición específica
+                // Tip Senior: No lo dejes fijo en el HttpClient si el mismo cliente 
+                // se usa para loguearse (peticiones anónimas).
+                _httpClient.DefaultRequestHeaders.Authorization =
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+                // 3. Llamada al endpoint
+                var response = await _httpClient.PostAsync("auth/generate-qr-code", null);
+
+                if(response.IsSuccessStatusCode)
+                {
+                    // OJO: Si tu controlador devuelve Ok(result) donde result es ServiceResponse<string>
+                    // debes deserializar el objeto completo, no solo el string.
+                    var result = await response.Content.ReadFromJsonAsync<ServiceResponse<string>>();
+                    return result ?? ServiceResponse<string>.Fail("Respuesta vacía del servidor");
+                }
+
+                return ServiceResponse<string>.Fail($"Error servidor: {response.StatusCode}");
+            }
+            catch (Exception ex)
+            {
+                return ServiceResponse<string>.Fail(ex.Message);
+            }
+        }
+
     }
 }

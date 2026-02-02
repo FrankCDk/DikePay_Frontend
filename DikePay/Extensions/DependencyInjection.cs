@@ -14,7 +14,11 @@ namespace DikePay.Extensions
             services.AddScoped<INetworkService, MauiNetworkService>();
             services.AddScoped<IPathProvider, MauiPathProvider>();
             services.AddScoped<IQrService, QrService>();
-
+            services.AddSingleton<IDeviceInfoService, MauiDeviceInfoService>();
+            services.AddSingleton<IAppInfoService, AppInfoService>();
+            services.AddSingleton<IDeviceInfoService, MauiDeviceInfoService>();
+            services.AddSingleton<IDialogService, MauiDialogService>();
+            services.AddSingleton<ISistemaService, SistemaService>();
             return services;
         }
     }

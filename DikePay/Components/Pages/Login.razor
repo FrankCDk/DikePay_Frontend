@@ -5,98 +5,115 @@
 @using CommunityToolkit.Mvvm.Messaging
 @using DikePay.Services.Implementations
 @inject IAuthService AuthService
-@inject ISyncService SyncService
+@inject IVersionService VersionService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @implements IDisposable
 
-<MudContainer MaxWidth="MaxWidth.Small">
-    @* Usamos EditForm para manejar la validación automáticamente *@
-    <EditForm Model="@_model" OnValidSubmit="OnValidSubmit">
-        <DataAnnotationsValidator /> @* Esto activa las reglas que pusimos en el modelo *@
 
-        <MudPaper Elevation="4" Class="pa-8" Style="border-radius: 12px;">
-            <MudStack Spacing="4">
-                <div class="d-flex flex-column align-center">
-                    <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Color="Color.Primary" Size="Size.Large" Class="mb-2" />
-                    <MudText Typo="Typo.h4" Color="Color.Primary" Style="font-weight: bold;">DikePay</MudText>
-                    <MudText Typo="Typo.h6" Class="mt-2">Iniciar sesión</MudText>
-                </div>
+@if (_comprobandoSistema)
+{
+    @* Pantalla de carga inicial *@
+    <div class="d-flex flex-column align-center justify-center" style="height: 80vh;">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        <MudText Typo="Typo.h6" Class="mt-4" Color="Color.Primary">Verificando actualizaciones...</MudText>
+    </div>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Small">
+        @* Usamos EditForm para manejar la validación automáticamente *@
+        <EditForm Model="@_model" OnValidSubmit="OnValidSubmit">
+            <DataAnnotationsValidator /> @* Esto activa las reglas que pusimos en el modelo *@
 
-                @* ForValidation señala errores automáticamente *@
-                <MudTextField @bind-Value="_model.Email"
-                              For="@(() => _model.Email)"
-                              Label="Correo electrónico"
-                              Variant="Variant.Outlined"
-                              FullWidth="true" />
+            <MudPaper Elevation="4" Class="pa-8" Style="border-radius: 12px;">
+                <MudStack Spacing="4">
 
-                <MudTextField @bind-Value="_model.Password"
-                              For="@(() => _model.Password)"
-                              Label="Contraseña"
-                              Variant="Variant.Outlined"
-                              InputType="@_passwordInput"
-                              Adornment="Adornment.End"
-                              AdornmentIcon="@_passwordInputIcon"
-                              OnAdornmentClick="TogglePasswordVisibility"
-                              FullWidth="true" />
+                    <div class="d-flex flex-column align-center mb-4">
+                        <MudImage Src="img/logo_dikepay.png"
+                                  Alt="DikePay Logo"
+                                  Elevation="0"
+                                  Width="120"
+                                  Class="mb-4 transition-scale" />                       
+                    </div>
 
-                <div class="d-flex align-center justify-space-between mt-n2">
-                    <MudCheckBox @bind-Value="_model.RememberMe" Label="Recordar" Color="Color.Primary" Dense="true" />
-                    <MudLink href="/forgot-password" Typo="Typo.caption">¿Olvidaste tu contraseña?</MudLink>
-                </div>
+                    @* ForValidation señala errores automáticamente *@
+                    <MudTextField @bind-Value="_model.Email"
+                                  For="@(() => _model.Email)"
+                                  Label="Correo electrónico"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true" />
 
-                @* Botón Principal de Ingreso *@
-                <MudButton ButtonType="ButtonType.Submit"
-                           Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           Size="Size.Large"
-                           FullWidth="true"
-                           Disabled="@_loading"
-                           Style="text-transform: none; height: 50px; font-weight: bold;">
-                    @if (_loading)
-                    {
-                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                        <MudText Class="ms-2">INGRESANDO...</MudText>
-                    }
-                    else
-                    {
-                        <MudText>INGRESAR</MudText>
-                    }
-                </MudButton>
+                    <MudTextField @bind-Value="_model.Password"
+                                  For="@(() => _model.Password)"
+                                  Label="Contraseña"
+                                  Variant="Variant.Outlined"
+                                  InputType="@_passwordInput"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@_passwordInputIcon"
+                                  OnAdornmentClick="TogglePasswordVisibility"
+                                  FullWidth="true" />
 
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Secondary"
-                           FullWidth="true"
-                           StartIcon="@Icons.Material.Filled.QrCodeScanner"
-                           OnClick="IrAEscaner"
-                           Style="height:50px;">
-                    INGRESAR CON QR
-                </MudButton>
+                    <div class="d-flex align-center justify-space-between mt-n2">
+                        <MudCheckBox @bind-Value="_model.RememberMe" Label="Recordar" Color="Color.Primary" Dense="true" />
+                        <MudLink href="/forgot-password" Typo="Typo.caption">¿Olvidaste tu contraseña?</MudLink>
+                    </div>
 
-                @* SEPARADOR VISUAL (Nivel Senior) *@
-                <div class="d-flex align-center my-4">
-                    <hr style="flex-grow: 1; border: 0; border-top: 1px solid var(--mud-palette-divider);" />
-                    <MudText Typo="Typo.body2" Class="mx-4" Color="Color.Primary">O</MudText>
-                    <hr style="flex-grow: 1; border: 0; border-top: 1px solid var(--mud-palette-divider);" />
-                </div>
+                    @* Botón Principal de Ingreso *@
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Large"
+                               FullWidth="true"
+                               Disabled="@_loading"
+                               Style="text-transform: none; height: 50px; font-weight: bold;">
+                        @if (_loading)
+                        {
+                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                            <MudText Class="ms-2">INGRESANDO...</MudText>
+                        }
+                        else
+                        {
+                            <MudText>INGRESAR</MudText>
+                        }
+                    </MudButton>
 
-                @* BOTÓN DE GOOGLE *@
-                <MudButton Variant="Variant.Outlined"
-                           FullWidth="true"
-                           StartIcon="@Icons.Custom.Brands.Google"
-                           OnClick="LoginConGoogle"
-                           Disabled="@_loading"
-                           Style="text-transform: none; height: 50px; border-color: #ddd;"
-                           Color="Color.Primary">
-                    Continuar con Google
-                </MudButton>
-               
-            </MudStack>
-        </MudPaper>
-    </EditForm>
-</MudContainer>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Secondary"
+                               FullWidth="true"
+                               StartIcon="@Icons.Material.Filled.QrCodeScanner"
+                               OnClick="IrAEscaner"
+                               Style="height:50px;">
+                        INGRESAR CON QR
+                    </MudButton>
+
+                    @* SEPARADOR VISUAL (Nivel Senior) *@
+                    <div class="d-flex align-center my-4">
+                        <hr style="flex-grow: 1; border: 0; border-top: 1px solid var(--mud-palette-divider);" />
+                        <MudText Typo="Typo.body2" Class="mx-4" Color="Color.Primary">O</MudText>
+                        <hr style="flex-grow: 1; border: 0; border-top: 1px solid var(--mud-palette-divider);" />
+                    </div>
+
+                    @* BOTÓN DE GOOGLE *@
+                    <MudButton Variant="Variant.Outlined"
+                               FullWidth="true"
+                               StartIcon="@Icons.Custom.Brands.Google"
+                               OnClick="LoginConGoogle"
+                               Disabled="@_loading"
+                               Style="text-transform: none; height: 50px; border-color: #ddd;"
+                               Color="Color.Primary">
+                        Continuar con Google
+                    </MudButton>
+
+                </MudStack>
+            </MudPaper>
+        </EditForm>
+    </MudContainer>
+}
 
 @code {
+
+    private bool _comprobandoSistema = true;
     private LoginRequest _model = new();
     private bool _isShowPassword;
     private InputType _passwordInput = InputType.Password;
@@ -131,7 +148,7 @@
             if (success)
             {
                 // 3. Navegamos al Dashboard
-                Navigation.NavigateTo("/dashboard");
+                Navigation.NavigateTo("/inicio");
             }
             else
             {
@@ -154,6 +171,26 @@
         Snackbar.Add("El inicio de sesión con Google estará disponible pronto.", Severity.Info);
     }
 
+    protected override async Task OnInitializedAsync()
+    {
+        // 1. VALIDACIÓN DE VERSIÓN AL ENTRAR
+        try
+        {
+            await VersionService.ValidarVersionAsync();
+        }
+        catch
+        {
+            // Si el servicio de versión falla (ej. sin internet),
+            // dejamos que el usuario intente loguearse igual.
+        }
+        finally
+        {
+            // 2. Solo después de validar, mostramos el Login
+            _comprobandoSistema = false;
+            StateHasChanged();
+        }
+    }
+
     protected override void OnInitialized()
     {
         // Nos registramos para recibir mensajes de tipo QrLoginMessage
@@ -167,7 +204,7 @@
             });
         });
     }
-
+   
     private async Task IrAEscaner()
     {
         try
@@ -191,22 +228,41 @@
 
     private async Task ProcesarResultadoQr(string contenido)
     {
-        // El contenido viene como "email|password"
-        var datos = contenido.Split('|');
-        if (datos.Length == 2)
+        // El contenido ahora es un código único, ej: "A1B2C3D4"
+        if (!string.IsNullOrWhiteSpace(contenido) && contenido.Length > 5)
         {
-            _model.Email = datos[0];
-            _model.Password = datos[1];
+            try 
+            {
+                _loading = true;
+                StateHasChanged();
 
-            // Forzamos a Blazor a refrescar la UI con los nuevos datos
-            StateHasChanged();
+                // SENIOR TIP: Llamamos a un nuevo método en el servicio
+                // especializado en intercambio de códigos QR por JWT
+                bool success = await AuthService.LoginWithQrCodeAsync(contenido);
 
-            // Ejecutamos el login automáticamente
-            await OnValidSubmit();
+                if (success)
+                {
+                    Snackbar.Add("¡Acceso concedido vía QR!", Severity.Success);
+                    Navigation.NavigateTo("/inicio");
+                }
+                else
+                {
+                    Snackbar.Add("El código ha expirado o ya fue utilizado", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Error al procesar QR: " + ex.Message, Severity.Error);
+            }
+            finally
+            {
+                _loading = false;
+                StateHasChanged();
+            }
         }
         else
         {
-            Snackbar.Add("Código QR no válido para inicio de sesión", Severity.Error);
+            Snackbar.Add("Código QR no reconocido", Severity.Error);
         }
     }
 

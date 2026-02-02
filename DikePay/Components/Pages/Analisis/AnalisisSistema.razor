@@ -1,0 +1,215 @@
+﻿@page "/analisis-sistema"
+@using MudBlazor
+@using DikePay.Application.Interfaces.Maui
+@inject ISistemaService SistemaService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
+    <MudText Typo="Typo.h4" Class="mb-6" Color="Color.Primary" Style="font-weight: 700;"><b>DikePay</b> - Centro de Instalaciones</MudText>
+    <MudGrid>
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="4" Class="pa-6 sticky-top" Style="background: #1a1c2e; color: white; border-radius: 16px;">
+                <MudText Typo="Typo.h6" Class="mb-4" Color="Color.Inherit">
+                    <MudIcon Icon="@Icons.Material.Filled.SettingsSuggest" Class="mr-2" /> Mi Equipo
+                </MudText>
+
+                <MudStack Spacing="4">
+                    <div class="info-group">
+                        <MudText Typo="Typo.caption" Style="color: #9fa2b4;">SISTEMA OPERATIVO</MudText>
+                        <MudText Typo="Typo.body1" Style="font-weight: 500;">@infoSistema.OS</MudText>
+                    </div>
+
+                    <div class="info-group">
+                        <MudText Typo="Typo.caption" Style="color: #9fa2b4;">PROCESADOR</MudText>
+                        <MudText Typo="Typo.body1" Style="font-weight: 500;">@infoSistema.Procesador</MudText>
+                    </div>
+
+                    <MudGrid Dense="true">
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Style="color: #9fa2b4;">MEMORIA RAM</MudText>
+                            <MudText Typo="Typo.body1">@infoSistema.RAM.ToString("N1") GB</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Style="color: #9fa2b4;">ARQUITECTURA</MudText>
+                            <MudText Typo="Typo.body1">@infoSistema.Arquitectura</MudText>
+                        </MudItem>
+                    </MudGrid>
+
+                    <div class="info-group">
+                        <MudText Typo="Typo.caption" Style="color: #9fa2b4;">ALMACENAMIENTO (C:)</MudText>
+                        <MudProgressLinear Color="@(infoSistema.EspacioLibre < 5 ? Color.Error : Color.Info)"
+                                           Value="@CalcularPorcentajeDisco()"
+                                           Class="my-2" />
+                        <MudText Typo="Typo.body2">@infoSistema.EspacioLibre.ToString("N2") GB disponibles</MudText>
+                    </div>
+
+                    <div class="info-group">
+                        <MudText Typo="Typo.caption" Style="color: #9fa2b4;">ESTADO DE RUNTIMES</MudText>
+                        <MudStack Spacing="1" Class="mt-2">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@(infoSistema.TieneDotNet? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)"
+                                         Color="@(infoSistema.TieneDotNet ? Color.Success : Color.Error)" Size="Size.Small" Class="mr-2" />
+                                <MudText Typo="Typo.body2">.NET Moderno</MudText>
+                            </div>
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@(infoSistema.TieneVb6? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning)"
+                                         Color="@(infoSistema.TieneVb6 ? Color.Success : Color.Warning)" Size="Size.Small" Class="mr-2" />
+                                <MudText Typo="Typo.body2">VB6 Runtime</MudText>
+                            </div>
+                        </MudStack>
+                    </div>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="8">
+            <div class="d-flex justify-space-between align-center mb-4">
+                <MudText Typo="Typo.h6">Programas Disponibles</MudText>
+                <MudChip T="string" Color="Color.Primary" Variant="Variant.Text">@listaProgramas.Count Aplicaciones</MudChip>
+            </div>
+
+            <div style="height: 75vh; overflow-y: auto; padding-right: 10px;">
+                <MudStack Spacing="3">
+                    @foreach (var programa in listaProgramas)
+                    {
+                        <MudCard Elevation="2" Class="rounded-lg border-l-4" Style="@GetCardBorderStyle(programa)">
+                            <MudCardContent>
+                                <MudGrid AlignItems="Center">
+                                    <MudItem xs="12" sm="5">
+                                        <MudText Typo="Typo.h6" Style="font-weight: 700; color: #1a1c2e;">@programa.Nombre</MudText>
+                                        <div class="d-flex align-center">
+                                            <MudText Typo="Typo.caption" Class="mud-text-secondary mr-2">v @programa.VersionApp</MudText>
+                                            @if (programa.EsVb6)
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">VB6</MudChip>
+                                            }
+                                        </div>
+                                    </MudItem>
+
+                                    <MudItem xs="12" sm="4">
+                                        <MudStack Spacing="0">
+                                            <div class="d-flex align-center">
+                                                <MudIcon Icon="@(infoSistema.RAM >= programa.RamReq ? Icons.Material.Filled.Check : Icons.Material.Filled.Close)"
+                                                         Color="@(infoSistema.RAM >= programa.RamReq ? Color.Success : Color.Error)" Size="Size.Small" Class="mr-2" />
+                                                <MudText Typo="Typo.caption">RAM Min: @programa.RamReq GB</MudText>
+                                            </div>
+                                            <div class="d-flex align-center">
+                                                <MudIcon Icon="@(infoSistema.EspacioLibre >= programa.EspacioReq ? Icons.Material.Filled.Check : Icons.Material.Filled.Close)"
+                                                         Color="@(infoSistema.EspacioLibre >= programa.EspacioReq ? Color.Success : Color.Error)" Size="Size.Small" Class="mr-2" />
+                                                <MudText Typo="Typo.caption">Disco: @programa.EspacioReq GB</MudText>
+                                            </div>
+                                            <div class="d-flex align-center">
+                                                <MudIcon Icon="@(ValidarRuntime(programa) ? Icons.Material.Filled.Check : Icons.Material.Filled.Warning)"
+                                                         Color="@(ValidarRuntime(programa) ? Color.Success : Color.Warning)" Size="Size.Small" Class="mr-2" />
+                                                <MudText Typo="Typo.caption">Runtime: @(programa.EsVb6 ? "VB6" : ".NET " + programa.NetReq)</MudText>
+                                            </div>
+                                        </MudStack>
+                                    </MudItem>
+
+                                    <MudItem xs="12" sm="3" Class="d-flex justify-end">
+                                        <MudButton Variant="@(ValidarCompatibilidad(programa) ? Variant.Filled : Variant.Outlined)"
+                                                   Color="@(ValidarCompatibilidad(programa) ? Color.Primary : Color.Error)"
+                                                   FullWidth="true"
+                                                   OnClick="@(() => ValidarYDescargar(programa))"
+                                                   StartIcon="@(ValidarCompatibilidad(programa) ? Icons.Material.Filled.Download : Icons.Material.Filled.Block)">
+                                            @(ValidarCompatibilidad(programa) ? "Instalar" : "No Apto")
+                                        </MudButton>
+                                    </MudItem>
+                                </MudGrid>
+                            </MudCardContent>
+                        </MudCard>
+                    }
+                </MudStack>
+            </div>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+<style>
+    .sticky-top {
+        position: sticky;
+        top: 20px;
+    }
+
+    .info-group {
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding-bottom: 12px;
+    }
+
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #bdbdbd;
+        border-radius: 10px;
+    }
+</style>
+
+@code {
+    public class EquipoInfo
+    {
+        public string OS { get; set; }
+        public string Procesador { get; set; }
+        public double RAM { get; set; }
+        public string Arquitectura { get; set; }
+        public double EspacioLibre { get; set; }
+        public bool TieneDotNet { get; set; }
+        public bool TieneVb6 { get; set; }
+    }
+
+    public class Programa
+    {
+        public string Nombre { get; set; }
+        public string VersionApp { get; set; }
+        public int RamReq { get; set; }
+        public int EspacioReq { get; set; }
+        public string NetReq { get; set; }
+        public bool EsVb6 { get; set; }
+    }
+
+    private EquipoInfo infoSistema = new();
+    private List<Programa> listaProgramas = new();
+
+    protected override void OnInitialized()
+    {
+        CargarDatosReales();
+        listaProgramas = new List<Programa> {
+            new() { Nombre = "DikeFacturación Legacy", VersionApp = "2.0", RamReq = 2, EspacioReq = 1, EsVb6 = true },
+            new() { Nombre = "DikeInventory Pro", VersionApp = "1.0.5", RamReq = 8, EspacioReq = 5, NetReq = "8.0" },
+            new() { Nombre = "DikeHeavy ERP", VersionApp = "5.0", RamReq = 32, EspacioReq = 100, NetReq = "6.0" },
+            new() { Nombre = "DikeCloud Sync", VersionApp = "1.2.0", RamReq = 4, EspacioReq = 2, NetReq = "8.0" }
+        };
+    }
+
+    private void CargarDatosReales()
+    {
+        infoSistema.OS = SistemaService.GetOSVersion();
+        infoSistema.Procesador = SistemaService.GetProcessorName();
+        infoSistema.RAM = SistemaService.GetTotalRAM();
+        infoSistema.Arquitectura = SistemaService.GetArchitecture();
+        infoSistema.EspacioLibre = SistemaService.GetFreeDiskSpaceGB();
+        infoSistema.TieneDotNet = SistemaService.IsDotNetInstalled("8.0");
+        infoSistema.TieneVb6 = SistemaService.IsVb6RuntimeInstalled();
+    }
+
+    private bool ValidarRuntime(Programa p) => p.EsVb6 ? infoSistema.TieneVb6 : infoSistema.TieneDotNet;
+
+    private bool ValidarCompatibilidad(Programa p) =>
+        infoSistema.RAM >= p.RamReq &&
+        infoSistema.EspacioLibre >= p.EspacioReq &&
+        ValidarRuntime(p);
+
+    private string GetCardBorderStyle(Programa p) =>
+        ValidarCompatibilidad(p) ? "border-left: 6px solid #4caf50; background: #f9fff9;" : "border-left: 6px solid #f44336; background: #fff9f9;";
+
+    private int CalcularPorcentajeDisco() => (int)Math.Min(100, (infoSistema.EspacioLibre / 500.0) * 100);
+
+    private void ValidarYDescargar(Programa p)
+    {
+        if (ValidarCompatibilidad(p))
+            Snackbar.Add($"Iniciando instalador de {p.Nombre}...", Severity.Success);
+        else
+            Snackbar.Add("El equipo no cumple con todos los requisitos críticos.", Severity.Error);
+    }
+}

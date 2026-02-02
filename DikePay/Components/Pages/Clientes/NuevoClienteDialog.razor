@@ -1,0 +1,123 @@
+﻿@using MudBlazor
+@using System.ComponentModel.DataAnnotations
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-3 mb-n1" />
+            Registrar Cliente
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @* Usamos EditForm para que los campos 'For' de MudBlazor funcionen *@
+        <EditForm Model="@cliente" OnValidSubmit="ConfirmarGuardado">
+            <DataAnnotationsValidator />
+
+            <MudGrid Spacing="1">
+                <MudItem xs="4">
+                    <MudSelect T="string" Label="Tipo Doc." @bind-Value="cliente.TipoDocumento" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelectItem Value="@("DNI")">DNI</MudSelectItem>
+                        <MudSelectItem Value="@("RUC")">RUC</MudSelectItem>
+                        <MudSelectItem Value="@("CE")">C.E.</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="8">
+                    <MudTextField Label="Nro. Documento"
+                                  @bind-Value="cliente.NumeroDocumento"
+                                  For="@(() => cliente.NumeroDocumento)"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@Icons.Material.Filled.Search"
+                                  OnAdornmentClick="BuscarEnApi"
+                                  AdornmentColor="Color.Primary" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField Label="Nombre o Razón Social"
+                                  @bind-Value="cliente.Nombre"
+                                  For="@(() => cliente.Nombre)"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField Label="Correo Electrónico"
+                                  @bind-Value="cliente.Email"
+                                  For="@(() => cliente.Email)"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField Label="Dirección"
+                                  @bind-Value="cliente.Direccion"
+                                  Variant="Variant.Outlined"
+                                  Margin="Margin.Dense"
+                                  Lines="2" />
+                </MudItem>
+            </MudGrid>
+
+            @* Este botón invisible permite que el formulario se envíe con la tecla Enter *@
+            <button type="submit" id="btnSubmitForm" style="display:none"></button>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancelar" Variant="Variant.Text">Cancelar</MudButton>
+        @* ButtonType Submit dispara el OnValidSubmit del EditForm *@
+        <MudButton ButtonType="ButtonType.Submit"
+                   Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="ConfirmarGuardado">Guardar Cliente</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Inject] ISnackbar Snackbar { get; set; } = null!;
+
+    private ClienteModel cliente = new ClienteModel();
+
+    private async Task BuscarEnApi()
+    {
+        if (string.IsNullOrWhiteSpace(cliente.NumeroDocumento))
+        {
+            Snackbar.Add("Debe ingresar un número", Severity.Warning);
+            return;
+        }
+
+        // Simulación de búsqueda
+        Snackbar.Add("Buscando en padrón...", Severity.Info);
+        await Task.Delay(1000);
+        // Aquí asignarías los valores de tu API a 'cliente.Nombre', etc.
+    }
+
+    private void ConfirmarGuardado()
+    {
+        // El diálogo se cierra y devuelve el objeto cliente al componente que lo llamó
+        MudDialog.Close(DialogResult.Ok(cliente));
+    }
+
+    private void Cancelar() => MudDialog.Cancel();
+
+    public class ClienteModel
+    {
+        [Required]
+        public string TipoDocumento { get; set; } = "DNI";
+
+        [Required(ErrorMessage = "El número es obligatorio")]
+        public string NumeroDocumento { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "El nombre es requerido")]
+        public string Nombre { get; set; } = string.Empty;
+
+        [EmailAddress(ErrorMessage = "Email no válido")]
+        public string? Email { get; set; }
+
+        public string? Direccion { get; set; }
+
+        public override string ToString() => Nombre;
+    }
+}
