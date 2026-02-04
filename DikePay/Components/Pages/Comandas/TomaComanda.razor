@@ -10,7 +10,10 @@
     
     @* --- CABECERA DE SELECCIÓN DE SERVICIO --- *@
     <MudPaper Elevation="0" Class="pa-4 mb-4 d-flex align-center justify-space-between" Style="background: transparent;">
-        <MudText Typo="Typo.h5"><b>@tituloVista</b></MudText>
+        
+        <MudText Typo="Typo.h4" Class="mb-4 d-none d-md-block" Color="Color.Primary">
+            <b>FacwebApp</b> - @tituloVista
+        </MudText>
         
         <MudToggleGroup T="TipoServicio" @bind-Value="tipoSeleccionado" Outline="true" Delimiters="true" Color="Color.Primary" SelectionMode="SelectionMode.SingleSelection">
             <MudToggleItem Value="@TipoServicio.Local" Text="LOCAL" />

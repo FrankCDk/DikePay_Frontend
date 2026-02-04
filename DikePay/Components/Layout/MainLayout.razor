@@ -10,6 +10,7 @@
 @inject ISyncWorkerService SyncWorker
 @inject INetworkService ConnectivityService
 @inject INotificationService NotifService
+@inject IFacturacionQueueService QueueService
 @implements IDisposable
 @inject AppState AppStateInstance
 @inject MudBlazor.ISnackbar SnackbarService
@@ -112,6 +113,13 @@
         transform: scale(0.9);
     }
 
+    /* Ajuste para que suba y se vea más integrado */
+    .custom-notification-badge .mud-badge {
+        top: 2px !important; /* Menor valor = más arriba */
+        right: 4px !important; /* Ajustamos para que no tape tanto la campana */
+        transform: none !important;
+    }
+
 </style>
 
 <MudLayout Class="@_layoutClass">
@@ -129,7 +137,7 @@
             <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
         }
 
-        <MudText Typo="Typo.h6" Class="ml-3">DikePay</MudText>
+        <MudText Typo="Typo.h6" Class="ml-3">FacwebApp</MudText>
         <MudSpacer />
         <MudToggleIconButton @bind-Toggled="@_isDarkMode"
                              Icon="@Icons.Material.Filled.DarkMode" Color="Color.Inherit"
@@ -144,7 +152,7 @@
         <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" ActivationEvent="MouseEvent.LeftClick" PopoverClass="mud-popover-cascading">
             <ActivatorContent>
                 @* Dinamizamos el Content y la Visibilidad *@
-                <MudBadge Content="@NotifService.NoLeidas" Color="Color.Error" Overlap="true" Class="mx-3" Visible="@(NotifService.NoLeidas > 0)">
+                <MudBadge Content="@NotifService.NoLeidas" Color="Color.Error" Overlap="true" Class="mx-3 custom-notification-badge" Visible="@(NotifService.NoLeidas > 0)">
                     <MudIconButton Icon="@Icons.Material.Outlined.Notifications" Color="Color.Inherit" />
                 </MudBadge>
             </ActivatorContent>
@@ -168,10 +176,11 @@
                         <MudList T="string">
                             @foreach (var notif in NotifService.Notificaciones)
                             {
-                                <MudListItem Icon="@(notif.Tipo == TipoNotificacion.Error ? Icons.Material.Filled.Error : Icons.Material.Filled.Info)"
-                                             IconColor="@(notif.Tipo == TipoNotificacion.Error ? Color.Error : Color.Info)">
+                                <MudListItem Icon="@GetIcono(notif.Tipo)" IconColor="@GetColor(notif.Tipo)">
                                     <div class="d-flex flex-column">
-                                        <MudText Typo="Typo.body2" Style="font-weight: bold;">@notif.Titulo</MudText>
+                                        <MudText Typo="Typo.body2" Style="@(notif.Leido ? "" : "font-weight: bold;")">
+                                            @notif.Titulo
+                                        </MudText>
                                         <MudText Typo="Typo.caption">@notif.Mensaje</MudText>
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">@notif.Fecha.ToShortTimeString()</MudText>
                                     </div>
@@ -318,6 +327,9 @@
         // 1. Suscripción al cambio de notificaciones
         NotifService.OnChange += HandleNotifStateChanged;
 
+        // Suscripion de facturacion
+        QueueService.OnNotification += MostrarNotificacionFiscal;
+
         AppStateInstance.SetConnectivity(ConnectivityService.HasInternet); 
         ConnectivityService.ConnectivityChanged += HandleConnectivityChanged;
 
@@ -330,6 +342,24 @@
                     catch (Exception) { /* Loguear error de sync silencioso */ }
                 });
         
+    }
+
+    private void MostrarNotificacionFiscal(string mensaje, TipoNotificacion tipo)
+    {
+        // Mapeo simple de tu Enum a MudBlazor Severity
+        Severity severity = tipo switch
+        {
+            TipoNotificacion.Exito => Severity.Success,
+            TipoNotificacion.Error => Severity.Error,
+            TipoNotificacion.Alerta => Severity.Warning,
+            _ => Severity.Info
+        };
+
+        InvokeAsync(() =>
+        {
+            Snackbar.Add(mensaje, severity);
+            StateHasChanged();
+        });
     }
 
     private void HandleSyncStarted() 
@@ -353,6 +383,7 @@
         SyncService.OnSyncCompleted -= HandleSyncSuccess;
         SyncService.OnSyncError -= HandleSyncError;
         NotifService.OnChange -= HandleNotifStateChanged;
+        QueueService.OnNotification -= MostrarNotificacionFiscal;
     }
 
     private void HandleConnectivityChanged(bool isConnected) { 
@@ -451,4 +482,20 @@
             StateHasChanged();
         });
     }
+
+    private string GetIcono(TipoNotificacion tipo) => tipo switch
+    {
+        TipoNotificacion.Error => Icons.Material.Filled.Error,
+        TipoNotificacion.Alerta => Icons.Material.Filled.Warning,
+        TipoNotificacion.Exito => Icons.Material.Filled.CheckCircle,
+        _ => Icons.Material.Filled.Info // Para el caso Info
+    };
+
+    private Color GetColor(TipoNotificacion tipo) => tipo switch
+    {
+        TipoNotificacion.Error => Color.Error,
+        TipoNotificacion.Alerta => Color.Warning,
+        TipoNotificacion.Exito => Color.Success,
+        _ => Color.Info // Para el caso Info
+    };
 }

@@ -1,24 +1,138 @@
 ﻿@page "/inicio"
 @using MudBlazor
+@using System.Timers
+
+<style>
+    /* Estilos para la barra de IA */
+    .shadow-glow {
+        box-shadow: 0 0 15px rgba(30, 58, 138, 0.1);
+        transition: all 0.3s ease;
+    }
+
+        .shadow-glow:focus-within {
+            box-shadow: 0 0 25px rgba(30, 58, 138, 0.2);
+            border-color: var(--mud-palette-primary-lighten) !important;
+            transform: scale(1.005);
+        }
+
+    .mud-input > input.mud-input-root-underline {
+        border-bottom: none !important;
+    }
+
+    /* Animaciones */
+    .animate-in {
+        animation: fadeIn 0.5s ease forwards;
+    }
+
+    .animate-pulse-slow {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: .5;
+        }
+    }
+
+    /* Estilos para las tarjetas */
+
+    .hover-card {
+        transition: all 0.3s ease;
+        background-color: transparent;
+    }
+
+
+
+        .hover-card:hover {
+            transform: translateY(-5px);
+            background-color: var(--mud-palette-background-grey);
+        }
+
+
+
+    .max-w-md {
+        max-width: 500px;
+    }
+
+</style>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
-    <MudStack AlignItems="AlignItems.Center" Spacing="4" Class="mb-12">
-        <MudIcon Icon="@Icons.Material.Outlined.WavingHand" Size="Size.Large" Color="Color.Primary" />
-        <MudText Typo="Typo.h3" Align="Align.Center" Style="font-weight: 700;">
-            Bienvenido a DikePay
+
+    @* CABECERA REFINADA *@
+    <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="mb-12">
+        <MudText Typo="Typo.h4" Align="Align.Center" Style="font-weight: 800; letter-spacing: -1px;">
+            Gestión inteligente para tu negocio
         </MudText>
         <MudText Typo="Typo.h6" Color="Color.Secondary" Align="Align.Center" Class="max-w-md">
-            Tu plataforma de facturación y gestión de inventario. ¿Qué deseas hacer hoy?
+            Controla tus ventas, facturación y stock en tiempo real desde un solo lugar.
         </MudText>
     </MudStack>
 
+    @* ASISTENTE AI *@
+    <MudGrid Justify="Justify.Center" Class="mb-12">
+        <MudItem xs="12" md="8" lg="7">
+            <MudPaper Elevation="4" Class="pa-2 rounded-pill d-flex align-center border-solid border-2 mud-border-primary shadow-glow">
+                <MudIcon Icon="@Icons.Material.Outlined.AutoAwesome" Color="Color.Primary" Class="ml-4" />
+                <MudTextField @bind-Value="_aiQuery"
+                              Placeholder="¿Cuál es el resumen de ventas de hoy?"
+                              Underline="false"
+                              Class="ml-3 mt-0 flex-grow-1"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@(_isProcessing? Icons.Material.Filled.HourglassEmpty : Icons.Material.Filled.ArrowUpward)"
+                              AdornmentColor="Color.Primary"
+                              OnAdornmentClick="ProcesarIA"
+                              Disabled="@_isProcessing"
+                              OnKeyDown="@(e => e.Key == "Enter" ? ProcesarIA() : Task.CompletedTask)" />
+            </MudPaper>
+
+            <div class="mt-4 px-6">
+                @if (_isProcessing)
+                {
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="rounded-pill mb-2" />
+                }
+
+                @if (_aiResponse != null)
+                {
+                    <MudAlert Severity="Severity.Success"
+                              Variant="Variant.Filled"
+                              AdornmentIcon="@Icons.Material.Filled.AutoAwesome"
+                              CloseIcon="@Icons.Material.Filled.Close"
+                              OnClose="() => _aiResponse = null"
+                              Class="rounded-lg mud-elevation-8 animate-in">
+                        @_aiResponse
+                    </MudAlert>
+                }
+            </div>
+        </MudItem>
+    </MudGrid>
+
+    @* ACCESOS DIRECTOS (CARDS) *@
+
     <MudGrid Justify="Justify.Center">
+
+        @* Card 1: Acceso Móvil (Primary) *@
         <MudItem xs="12" sm="6" md="4">
             <MudPaper Elevation="0" Class="pa-6 d-flex flex-column align-center border-solid border-2 mud-border-primary rounded-lg hover-card">
                 <MudIcon Icon="@Icons.Material.Outlined.QrCodeScanner" Color="Color.Primary" Size="Size.Large" Class="mb-4" />
                 <MudText Typo="Typo.h6" GutterBottom="true">Acceso Móvil</MudText>
                 <MudText Typo="Typo.body2" Align="Align.Center" Class="mb-4">
-                    Genera un código seguro para iniciar sesión en tu dispositivo móvil sin contraseñas.
+                    Sincroniza tu cuenta con la App móvil mediante un código seguro de acceso rápido.
                 </MudText>
                 <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/configuracion/acceso">
                     Configurar Acceso
@@ -26,55 +140,92 @@
             </MudPaper>
         </MudItem>
 
+        @* Card 2: Facturación (Tertiary) *@
         <MudItem xs="12" sm="6" md="4">
-            <MudPaper Elevation="0" Class="pa-6 d-flex flex-column align-center border-solid border-1 mud-border-lines-default rounded-lg hover-card">
+            @* Cambiado a border-2 y mud-border-tertiary *@
+            <MudPaper Elevation="0" Class="pa-6 d-flex flex-column align-center border-solid border-2 mud-border-tertiary rounded-lg hover-card">
                 <MudIcon Icon="@Icons.Material.Outlined.ReceiptLong" Color="Color.Tertiary" Size="Size.Large" Class="mb-4" />
                 <MudText Typo="Typo.h6" GutterBottom="true">Facturación</MudText>
                 <MudText Typo="Typo.body2" Align="Align.Center" Class="mb-4">
                     Emite facturas electrónicas, gestiona notas de crédito y consulta tus comprobantes emitidos.
                 </MudText>
-                <MudButton Variant="Variant.Text" Color="Color.Tertiary" Href="/facturacion/ventas">
+                <MudButton Variant="Variant.Outlined" Color="Color.Tertiary" Href="/facturacion/ventas">
                     Ir a Facturación
                 </MudButton>
             </MudPaper>
         </MudItem>
 
+        @* Card 3: Ajustes (Default/Grey) *@
         <MudItem xs="12" sm="6" md="4">
-            <MudPaper Elevation="0" Class="pa-6 d-flex flex-column align-center border-solid border-1 mud-border-lines-default rounded-lg hover-card">
-                <MudIcon Icon="@Icons.Material.Outlined.Settings" Color="Color.Surface" Size="Size.Large" Class="mb-4" />
+            @* Cambiado a border-2 y mud-border-default *@
+            <MudPaper Elevation="0" Class="pa-6 d-flex flex-column align-center border-solid border-2 mud-border-default rounded-lg hover-card">
+                <MudIcon Icon="@Icons.Material.Outlined.Settings" Color="Color.Default" Size="Size.Large" Class="mb-4" />
                 <MudText Typo="Typo.h6" GutterBottom="true">Ajustes</MudText>
                 <MudText Typo="Typo.body2" Align="Align.Center" Class="mb-4">
-                    Personaliza tu perfil, cambia tu contraseña o configura tus preferencias.
+                    Personaliza tu perfil, cambia tu contraseña o configura tus preferencias de sistema.
                 </MudText>
-                <MudButton Variant="Variant.Text" Color="Color.Default">Ir a Perfil</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" Href="/configuracion/acceso">
+                    Ir a Perfil
+                </MudButton>
             </MudPaper>
         </MudItem>
+
     </MudGrid>
 
+
+
+    @* TIP DEL DÍA *@
+
     <MudStack AlignItems="AlignItems.Center" Class="mt-16">
+
         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Icon="@Icons.Material.Outlined.Lightbulb" Class="rounded-pill">
-            Tip: Puedes usar el código QR para loguearte rápidamente desde la App de DikePay.
+
+            Tip: Puedes usar el comando "/ventas" en el FacwebBot para un reporte rápido.
+
         </MudAlert>
+
     </MudStack>
+
 </MudContainer>
 
-<style>
-    .hover-card {
-        transition: all 0.3s ease;
-        background-color: transparent;
-    }
-
-        .hover-card:hover {
-            transform: translateY(-5px);
-            background-color: var(--mud-palette-background-grey);
-            border-color: var(--mud-palette-primary) !important;
-        }
-
-    .max-w-md {
-        max-width: 500px;
-    }
-</style>
-
 @code {
-    // Aquí podrías inyectar el AuthService para saludar al usuario por su nombre
+    private string _aiQuery = string.Empty;
+    private bool _isProcessing = false;
+    private string? _aiResponse = null;
+    private Timer? _timer;
+
+    private async Task ProcesarIA()
+    {
+        if (string.IsNullOrWhiteSpace(_aiQuery) || _isProcessing) return;
+
+        _isProcessing = true;
+        _aiResponse = null;
+
+        await Task.Delay(2000);
+
+        _aiResponse = $"Facweb: He analizado tus ventas. Hoy llevas S/ 2,450.00 acumulados. ¡Vas un 12% arriba que ayer!";
+
+        _isProcessing = false;
+        _aiQuery = string.Empty;
+
+        // Iniciar temporizador para auto-cerrar la respuesta en 10 segundos
+        ReiniciarTimer();
+    }
+
+    private void ReiniciarTimer()
+    {
+        _timer?.Stop();
+        _timer?.Dispose();
+
+        _timer = new Timer(10000); // 10 segundos
+        _timer.Elapsed += (s, e) =>
+        {
+            _aiResponse = null;
+            InvokeAsync(StateHasChanged);
+            _timer.Stop();
+        };
+        _timer.Start();
+    }
+
+    public void Dispose() => _timer?.Dispose();
 }

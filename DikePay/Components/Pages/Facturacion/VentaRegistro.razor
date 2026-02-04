@@ -90,8 +90,8 @@
 </style>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-2 mt-md-4">
-    <MudText Typo="Typo.h4" Class="mb-4 d-none d-md-block" Color="Color.Primary" Style="font-weight: 700;">
-        <b>DikePay</b> - Nueva Venta
+    <MudText Typo="Typo.h4" Class="mb-4 d-none d-md-block" Color="Color.Primary">
+        <b>FacwebApp</b> - Nueva Venta
     </MudText>
 
     @if (IsMobile)
@@ -505,11 +505,8 @@ RenderFragment RenderSeccionVenta() => __builder => {
 
     private async Task ProcesarPago()
     {
-        // 1. DIÁLOGO DE PAGO
-        var parametersPago = new DialogParameters<PagoDialog> {
-        { x => x.TotalVenta, _totalVenta }
-    };
-
+        // 1. DIÁLOGO DE PAGO: Capturamos cómo paga el cliente
+        var parametersPago = new DialogParameters<PagoDialog> { { x => x.TotalVenta, _totalVenta } };
         var optionsStandard = new DialogOptions
         {
             CloseOnEscapeKey = true,
@@ -522,30 +519,44 @@ RenderFragment RenderSeccionVenta() => __builder => {
         var dialogPago = await DialogService.ShowAsync<PagoDialog>("Cobrar Venta", parametersPago, optionsStandard);
         var resultPago = await dialogPago.Result;
 
-        // Si el usuario canceló el pago, nos detenemos aquí
         if (resultPago.Canceled || resultPago.Data == null) return;
+        dynamic datosPago = resultPago.Data;
 
-        // --- AQUÍ ESTABA EL "HUECO" ---
-
-        // 2. DIÁLOGO DE TRACKING (EL STEPPER)
-        // Usamos opciones más estrictas para que no lo cierren por accidente
-        var optionsTracking = new DialogOptions
+        // 2. PREPARAR LA ENTIDAD VENTA: Armamos el objeto final
+        var ventaParaGuardar = new Venta
         {
-            CloseButton = false,
-            BackdropClick = false,
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
+            Serie = _tipoDoc == "Boleta" ? "B001" : "F001",
+            Numero = "PROVISIONAL", // El repo debería asignar el correlativo real
+            FechaEmision = _fechaEmision ?? DateTime.Now,
+            TipoComprobante = _tipoDoc == "Boleta" ? "03" : "01",
+            ClienteNombre = _clienteNombre,
+            Moneda = _moneda,
+            Total = _totalVenta,
+            Items = _carrito.ToList()
         };
 
-        var dialogTracking = await DialogService.ShowAsync<TrackingFacturacionDialog>("Estado de Emisión", optionsTracking);
+        // 3. REGISTRO LOCAL CON TRACKING: Feedback visual rápido
+        var parametersTracking = new DialogParameters { ["VentaData"] = ventaParaGuardar };
+        var optionsTracking = new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, NoHeader = true };
+
+        var dialogTracking = await DialogService.ShowAsync<TrackingFacturacionDialog>("Registrando", parametersTracking, optionsTracking);
         var resultTracking = await dialogTracking.Result;
 
-        // Si el proceso de tracking terminó (Ok), mostramos el ticket
         if (!resultTracking.Canceled)
         {
-            // 3. DIÁLOGO DE TICKET EXITOSO
-            dynamic datos = resultPago.Data;
+            // 4. ¡ÉXITO LOCAL!
+            // Disparamos el envío a SUNAT en background (Fire and Forget)
+            // Esto evita que el vendedor espere a que el servidor de SUNAT responda
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    // await FacturacionService.EnviarASunatAsync(ventaParaGuardar);
+                }
+                catch { /* El Worker de fondo reintentará luego */ }
+            });
 
+            // 5. MOSTRAR TICKET: El cliente ya quiere su comprobante
             var productosParaTicket = _carrito.Select(item => new TicketItemDto
             {
                 Nombre = item.Producto.Nombre,
@@ -553,30 +564,15 @@ RenderFragment RenderSeccionVenta() => __builder => {
                 Cantidad = item.Cantidad
             }).ToList();
 
-            await MostrarTicketExitoso(datos, productosParaTicket);
+            await MostrarTicketExitoso(datosPago, productosParaTicket);
 
-            // Limpieza final
+            // Limpieza de interfaz
             _carrito.Clear();
-            Snackbar.Add("Venta registrada y declarada con éxito", Severity.Success);
+            _clienteNombre = "Público General";
+            Snackbar.Add("Venta completada", Severity.Success);
             StateHasChanged();
         }
     }
-
-    // CORREGIDO: Ahora el método acepta la lista de productos preparada
-    // private async Task MostrarTicketExitoso(dynamic datos, List<TicketItemDto> productos)
-    // {
-    //     var parametersExito = new DialogParameters<VentaExitosaDialog>
-    //     {
-    //         { x => x.TotalPagado, (decimal)datos.TotalPagado },
-    //         { x => x.Descuento, (decimal)datos.Descuento },
-    //         { x => x.MetodoPago, (string)datos.Metodo },
-    //         { x => x.ProductosVendidos, productos }, 
-    //         { x => x.SerieNumero, $"B001-{DateTime.Now:mmssff}" } 
-    //     };
-
-    //     var options = new DialogOptions { CloseButton = false, MaxWidth = MaxWidth.Small, FullWidth = true };
-    //     await DialogService.ShowAsync<VentaExitosaDialog>("Comprobante", parametersExito, options);
-    // }
 
     private async Task MostrarTicketExitoso(dynamic datos, List<TicketItemDto> productos)
     {

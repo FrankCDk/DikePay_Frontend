@@ -1,212 +1,71 @@
 ﻿@using MudBlazor
-@using DikePay.Application.Interfaces
-@inject INetworkService ConnectivityService
+@using DikePay.Domain.Entities
+@using DikePay.Application.Interfaces.Services
+@inject IFacturacionQueueService QueueService
+@inject IVentaService VentaRepository
 
-<style>
-    /* Ocultamos los botones por defecto del stepper para control total */
-    .mud-stepper-actions {
-        display: none !important;
-    }
-
-    /* Animación suave para la entrada de los botones finales */
-    .fade-in {
-        animation: fadeIn 0.5s ease-in;
-    }
-
-    @@keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-</style>
-
-<MudDialog>
+<MudDialog Class="compact-dialog">
     <DialogContent>
-        <MudPaper Elevation="0" Class="pa-2" >
-
-            @if (!_procesoCompleto && _steps[2] != StepStatus.Error)
+        <div class="d-flex flex-column align-center py-6">
+            @if (_isProcessing)
             {
-                <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2"><b>Finalizando Operación</b></MudText>
-                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-6 rounded-pill" Size="Size.Small" />
+                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" Class="mb-4" />
+                <MudText Typo="Typo.h6"><b>Guardando Venta...</b></MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">Asegurando datos en el dispositivo</MudText>
             }
-            else if (_procesoCompleto)
+            else if (_hasError)
             {
-                <div class="d-flex flex-column align-center mb-4 fade-in">
-                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" Style="font-size: 3rem;" />
-                    <MudText Typo="Typo.h5" Color="Color.Success"><b>¡Venta Exitosa!</b></MudText>
-                </div>
+                <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Large" Style="font-size: 3rem;" />
+                <MudText Typo="Typo.h6" Color="Color.Error"><b>Error de Guardado</b></MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center">No se pudo persistir la venta localmente.</MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="() => MudDialog.Cancel()" Class="mt-4">Cerrar</MudButton>
             }
-
-            <MudStepper Vertical HideActions="true" @bind-ActiveIndex="_activeStep" Class="mud-width-full">
-
-                <MudStep Title="Generando Comprobante" Completed="@IsCompleted(0)"
-                         SecondaryText="@GetDescription(0)" Icon="@GetStepIcon(0)">
-                </MudStep>
-
-                <MudStep Title="Preparando XML Electrónico" Completed="@IsCompleted(1)"
-                         SecondaryText="@GetDescription(1)" Icon="@GetStepIcon(1)">
-                </MudStep>
-
-                <MudStep Title="Comunicación con SUNAT / OSE" Completed="@IsCompleted(2)"
-                         SecondaryText="@GetDescription(2)" Icon="@GetStepIcon(2)">
-                </MudStep>
-
-                <MudStep Title="Confirmación Final" Completed="@IsCompleted(3)"
-                         SecondaryText="@GetDescription(3)" Icon="@GetStepIcon(3)">
-                </MudStep>
-
-            </MudStepper>
-
-            @if (_procesoCompleto)
+            else
             {
-                <div class="mt-6 fade-in">
-                    <MudStack Spacing="2">
-                        <MudButton Color="Color.Primary"
-                                   Variant="Variant.Filled"
-                                   FullWidth
-                                   Size="Size.Large"
-                                   StartIcon="@Icons.Material.Filled.Print"
-                                   OnClick="VerTicket"
-                                   Class="rounded-lg py-3">
-                            IMPRIMIR TICKET
-                        </MudButton>
-
-                        <MudButton Color="Color.Default"
-                                   Variant="Variant.Outlined"
-                                   FullWidth
-                                   OnClick="CerrarModal"
-                                   Class="rounded-lg">
-                            Finalizar y Salir
-                        </MudButton>
-                    </MudStack>
-                </div>
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Color="Color.Success"><b>Venta Asegurada</b></MudText>
             }
-
-            @if (_steps[2] == StepStatus.Error)
-            {
-                <div class="mt-4 pa-4 rounded-lg" style="background-color: var(--mud-palette-error-hover);">
-                    <MudStack AlignItems="AlignItems.Center" Spacing="2">
-                        <MudIcon Icon="@Icons.Material.Filled.WifiOff" Color="Color.Error" Size="Size.Large" />
-                        <MudText Typo="Typo.subtitle1" Color="Color.Error" Align="Align.Center"><b>Sin conexión a Internet</b></MudText>
-                        <MudText Typo="Typo.body2" Align="Align.Center">El comprobante se guardó localmente. Se enviará a SUNAT automáticamente cuando recuperes la conexión.</MudText>
-
-                        <MudButton Color="Color.Error"
-                                   Variant="Variant.Filled"
-                                   FullWidth
-                                   Class="mt-2 rounded-lg"
-                                   OnClick="CerrarModal">
-                            Entendido, cerrar
-                        </MudButton>
-                    </MudStack>
-                </div>
-            }
-
-        </MudPaper>
+        </div>
     </DialogContent>
 </MudDialog>
 
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public Venta VentaData { get; set; } = null!;
 
-    private int _activeStep = 0;
-    private bool _procesoCompleto = false;
-
-    private readonly StepStatus[] _steps = {
-        StepStatus.Pending,
-        StepStatus.Pending,
-        StepStatus.Pending,
-        StepStatus.Pending
-    };
+    private bool _isProcessing = true;
+    private bool _hasError = false;
 
     protected override async Task OnInitializedAsync()
     {
-        await EjecutarProceso();
+        await GuardarLocalmente();
     }
 
-    private string GetDescription(int index)
+    private async Task GuardarLocalmente()
     {
-        // Si el paso falló
-        if (_steps[index] == StepStatus.Error) return "Error en el proceso";
-
-        // Si el paso ya se completó, devolvemos un mensaje de "Éxito" corto
-        if (_steps[index] == StepStatus.Success)
+        try
         {
-            return index switch
-            {
-                0 => "Venta registrada localmente",
-                1 => "XML generado correctamente",
-                2 => "Documento aceptado por SUNAT",
-                3 => "¡Comprobante publicado y listo!",
-                _ => "Completado"
-            };
-        }
+            // 1. Guardar en DB Local (SQLite/LiteDB)
+            // IMPORTANTE: Aquí obtienes el ID o Correlativo real de la DB
+            //await VentaRepository.InsertarVentaAsync(VentaData);
 
-        // Si el paso está en proceso o pendiente, devolvemos la descripción original
-        return index switch
-        {
-            0 => _steps[index] == StepStatus.Processing ? "Registrando..." : "Esperando registro local",
-            1 => _steps[index] == StepStatus.Processing ? "Estructurando..." : "Pendiente de generación XML",
-            2 => _steps[index] == StepStatus.Processing ? "Enviando a SUNAT..." : "Pendiente de envío fiscal",
-            3 => _steps[index] == StepStatus.Processing ? "Validando..." : "Esperando confirmación final",
-            _ => ""
-        };
-    }
-
-    private string GetStepIcon(int index)
-    {
-        if (_steps[index] == StepStatus.Processing) return Icons.Material.Filled.Sync;
-        if (_steps[index] == StepStatus.Success) return Icons.Material.Filled.CheckCircle;
-        if (_steps[index] == StepStatus.Error) return Icons.Material.Filled.Error;
-        return Icons.Material.Filled.Circle;
-    }
-
-    private async Task EjecutarProceso()
-    {
-        for (int i = 0; i < _steps.Length; i++)
-        {
-            _activeStep = i;
-            _steps[i] = StepStatus.Processing;
+            await Task.Delay(600); // Feedback visual mínimo
+            _isProcessing = false;
             StateHasChanged();
 
-            await Task.Delay(1200); // Simulación de carga
+            // 2. DISPARAR PROCESO FISCAL EN SEGUNDO PLANO
+            // "Fuego y olvido": No esperamos el await aquí.
+            _ = QueueService.ProcesarEnvioFiscal(VentaData);
 
-            if (i == 2 && !ConnectivityService.HasInternet)
-            {
-                _steps[i] = StepStatus.Error;
-                StateHasChanged();
-                return;
-            }
-
-            _steps[i] = StepStatus.Success;
-            StateHasChanged();
-
-            if (i < _steps.Length - 1)
-                _activeStep = i + 1;
+            // 3. CERRAR Y CONTINUAR
+            await Task.Delay(400);
+            MudDialog.Close(DialogResult.Ok(true));
         }
-
-        _procesoCompleto = true;
-        StateHasChanged();
+        catch (Exception)
+        {
+            _isProcessing = false;
+            _hasError = true;
+            StateHasChanged();
+        }
     }
-
-    private bool IsCompleted(int index) => _steps[index] == StepStatus.Success;
-
-    private string GetStatusText(int index) => _steps[index] switch
-    {
-        StepStatus.Pending => "En espera",
-        StepStatus.Processing => "Procesando...",
-        StepStatus.Success => "Listo",
-        StepStatus.Error => "Omitido / Error",
-        _ => ""
-    };
-
-    private void VerTicket() => MudDialog.Close(DialogResult.Ok(true));
-    private void CerrarModal() => MudDialog.Cancel();
-
-    private enum StepStatus { Pending, Processing, Success, Error }
 }

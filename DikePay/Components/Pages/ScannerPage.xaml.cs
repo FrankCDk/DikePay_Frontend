@@ -50,4 +50,11 @@ public partial class ScannerPage : ContentPage
         CameraView.IsDetecting = false;
         CameraView.Handler?.DisconnectHandler();
     }
+
+    private async void OnCancelClicked(object sender, EventArgs e)
+    {
+        // Detenemos la cámara antes de salir para liberar recursos
+        CameraView.IsDetecting = false;
+        await Shell.Current.GoToAsync("..");
+    }
 }

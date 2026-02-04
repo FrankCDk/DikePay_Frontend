@@ -194,6 +194,12 @@
     private decimal SaldoRestante => Math.Max(0, TotalFinal - TotalPagado);
     private decimal Vuelto => TotalPagado > TotalFinal ? TotalPagado - TotalFinal : 0;
 
+    protected override void OnInitialized()
+    {
+        // Al cargar, el monto por defecto es el total que falta pagar
+        _montoIngresado = TotalVenta;
+    }
+
     private void AgregarPago()
     {
         if (_montoIngresado <= 0) return;

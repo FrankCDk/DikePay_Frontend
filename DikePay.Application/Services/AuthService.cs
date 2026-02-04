@@ -34,6 +34,15 @@ namespace DikePay.Application.Services
 
         public async Task<bool> LoginAsync(string user, string password)
         {
+
+            //SetAppState(new LoginResponseDto
+            //{
+            //    Email = "fcruz@realsystems.com.pe",
+            //    Name = "Frank Cruz",
+            //    Role = "AD"
+            //});
+            //return true;
+
             if (_connectivityService.HasInternet)
             {
                 return await LoginOnlineAsync(user, password);
@@ -150,6 +159,18 @@ namespace DikePay.Application.Services
 
         public async Task<bool> LoginWithQrCodeAsync(string authCode)
         {
+
+            //await _authStorage.SaveValueAsync("last_user", "fcruz@realsystems.com.pe");
+            //await _authStorage.SaveValueAsync("last_pass_hash", "1234");
+            //SetAppState(new LoginResponseDto
+            //{
+            //    Email = "fcruz@realsystems.com.pe",
+            //    Name = "Frank Cruz",
+            //    Role = "AD"
+            //});
+            //return true;
+
+
             var request = new QrLoginRequest
             {
                 AuthCode = authCode,
