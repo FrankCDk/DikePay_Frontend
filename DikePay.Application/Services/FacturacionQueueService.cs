@@ -29,14 +29,14 @@ namespace DikePay.Application.Services
 
 
                 OnNotification?.Invoke("Venta enviada a OSE", TipoNotificacion.Exito);
-                _notifService.Agregar("Declaración exitosa", $"Venta {venta.Serie}-{venta.Numero} con estado CDRA", TipoNotificacion.Exito);
+                await _notifService.Agregar("Declaración exitosa", $"Venta {venta.Serie}-{venta.Numero} con estado CDRA", TipoNotificacion.Exito);
 
 
             }
             catch (Exception ex)
             {
                 OnNotification?.Invoke($"Error: {ex.Message}", TipoNotificacion.Error);
-                _notifService.Agregar("Error en Declaración", $"Error OSE en {venta.Serie}-{venta.Numero}: {ex.Message}", TipoNotificacion.Error);
+                await _notifService.Agregar("Error en Declaración", $"Error OSE en {venta.Serie}-{venta.Numero}: {ex.Message}", TipoNotificacion.Error);
             }
         }
     }

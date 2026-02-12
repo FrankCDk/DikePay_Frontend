@@ -8,12 +8,16 @@ using DikePay.Shared.State;
 
 namespace DikePay.Application.Services
 {
+
+    /// <summary>
+    /// Clase de sincronización de información al momento de ingresar a la aplicación
+    /// </summary>
     public class SyncService : ISyncService
     {
-        private readonly IArticuloApiService _api;      // El que trae del servidor
-        private readonly IArticuloRepository _repo;    // El que guarda en SQLite
+        private readonly IArticuloApiService _apiArticulos; // Sincroniza articulos
+        private readonly IArticuloRepository _repo;
         private readonly INotificationService _notifService;
-        private readonly IPromocionApiService _promociones;
+        private readonly IPromocionApiService _apiPromociones; // Sincroniza las promociones
         private readonly IPromocionesRepository _promocionesRepository;
         private readonly INetworkService _network;
 
@@ -29,19 +33,19 @@ namespace DikePay.Application.Services
         public double Progreso { get; private set; }
 
         public SyncService(
-            IArticuloApiService api,
+            IArticuloApiService apiArticulos,
             IArticuloRepository repo,
             INotificationService notificationService,
-            IPromocionApiService promociones,
+            IPromocionApiService apiPromociones,
             IPromocionesRepository promocionesRepository,
             INetworkService network,
             AppState appState)
         {
-            _api = api;
+            _apiArticulos = apiArticulos;
             _repo = repo;
             _appState = appState;
             _notifService = notificationService;
-            _promociones = promociones;
+            _apiPromociones = apiPromociones;
             _promocionesRepository = promocionesRepository;
             _network = network;
         }
@@ -65,8 +69,8 @@ namespace DikePay.Application.Services
                 _appState.NotifyStateChanged();
 
                 // 1. Descarga paralela (Opcional para velocidad)
-                var articulosDto = await _api.GetArticulosFromApiAsync();
-                var promocionesDto = await _promociones.GetPromocionFromApiAsync();
+                var articulosDto = await _apiArticulos.GetArticulosFromApiAsync();
+                var promocionesDto = await _apiPromociones.GetPromocionFromApiAsync();
 
                 int conteoArticulos = 0;
                 int conteoPromos = 0;
@@ -98,7 +102,7 @@ namespace DikePay.Application.Services
             {
                 // Logueamos el error técnico internamente pero avisamos al usuario
                 UltimoError = $"Error crítico: {ex.Message}";
-                _notifService.Agregar("Error de Sincronización", ex.Message, TipoNotificacion.Error);
+                await _notifService.Agregar("Error de Sincronización", ex.Message, TipoNotificacion.Error);
                 OnSyncError?.Invoke(UltimoError);
             }
             finally

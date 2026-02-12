@@ -1,6 +1,8 @@
-﻿using System.Net.Http.Json;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Net.Http.Json;
 using System.Text.Json;
 using DikePay.Application.Common;
+using DikePay.Application.DTOs.Api;
 using DikePay.Application.DTOs.Auth;
 using DikePay.Application.DTOs.Auth.Response;
 using DikePay.Application.Interfaces;
@@ -32,26 +34,18 @@ namespace DikePay.Application.Services
             _deviceInfo = deviceInfoService;
         }
 
-        public async Task<bool> LoginAsync(string user, string password)
+        public async Task<bool> LoginAsync(string user, string password, bool rememberMe)
         {
-
-            //SetAppState(new LoginResponseDto
-            //{
-            //    Email = "fcruz@realsystems.com.pe",
-            //    Name = "Frank Cruz",
-            //    Role = "AD"
-            //});
-            //return true;
 
             if (_connectivityService.HasInternet)
             {
-                return await LoginOnlineAsync(user, password);
+                return await LoginOnlineAsync(user, password, rememberMe);
             }
 
             return await LoginOfflineAsync(user, password);
         }
 
-        private async Task<bool> LoginOnlineAsync(string user, string password)
+        private async Task<bool> LoginOnlineAsync(string user, string password, bool rememberMe)
         {
             try
             {
@@ -60,34 +54,39 @@ namespace DikePay.Application.Services
 
                 // 2. Realizamos la llamada POST a tu API configurada en MauiProgram
                 var response = await _httpClient.PostAsJsonAsync("auth", loginRequest);
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<LoginResponseDto>>();
 
-                if (response.IsSuccessStatusCode)
+                if (result != null)
                 {
-                    // 3. Leemos la respuesta exitosa
-                    var result = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
-
-                    if (result != null)
+                    
+                    if (result.Success) // Se logro obtener un token para iniciar sesión
                     {
                         // Agregamos manualmente el Success si tu API no lo envía pero el objeto llegó
                         result.Success = true;
-
-                        // 4. PERSISTENCIA PARA OFFLINE (Lo que hablamos antes)
-                        await _authStorage.SaveValueAsync("last_user", user);
+                        await _authStorage.SaveValueAsync("last_user", user); // Guardamos el email                        
                         await _authStorage.SaveValueAsync("last_pass_hash", password);
-                        await _authStorage.SaveValueAsync("user_data", JsonSerializer.Serialize(result));
-                        await _authStorage.SaveValueAsync("jwt_token", result.Token);
+                        await _authStorage.SaveValueAsync("user_data", JsonSerializer.Serialize(result.Data));
+                        await _authStorage.SaveValueAsync("jwt_token", result.Data.Token);
 
-                        SetAppState(result);
+                        if (rememberMe) 
+                            await _authStorage.SaveValueAsync("remember_me", "true");
+
+                        SetAppState(result.Data);
                         return true;
                     }
+
+                    throw new Exception(result.Message);
+
                 }
+
+                return false;
+
             }
             catch (Exception ex)
             {
-                // Como Senior te digo: loguea esto en consola para depurar
-               Console.WriteLine($"Error en LoginOnline: {ex.Message}");
+                throw new Exception(ex.Message);
             }
-            return false;
+            
         }
 
         private async Task<bool> LoginOfflineAsync(string user, string password)
@@ -126,14 +125,19 @@ namespace DikePay.Application.Services
         {
             try
             {
+
+                var remember = await _authStorage.GetValueAsync("remember_me");
+
+                if (remember != "true")
+                {
+                    _authStorage.RemoveValue("last_user");
+                    _authStorage.RemoveValue("remember_me");
+                }
+
                 // 1. Borramos los datos sensibles del dispositivo
-                _authStorage.RemoveValue("last_user");
+                _authStorage.RemoveValue("jwt_token");
                 _authStorage.RemoveValue("last_pass_hash");
                 _authStorage.RemoveValue("user_data");
-
-                // Si usaste SecureStorage.Default.RemoveAll(), ten cuidado 
-                // porque borrará TODO, incluyendo preferencias de usuario o temas.
-                // Es mejor borrar solo lo relacionado al Auth.
 
                 // 2. Limpiamos el estado en memoria
                 _appState.CerrarSesion();
@@ -148,29 +152,47 @@ namespace DikePay.Application.Services
         public async Task<bool> VerificarSesionExistenteAsync()
         {
             var userDataJson = await _authStorage.GetValueAsync("user_data");
-            if (userDataJson != null)
+            var token = await _authStorage.GetValueAsync("jwt_token");
+
+            if (string.IsNullOrEmpty(userDataJson) || string.IsNullOrEmpty(token))
+                return false;
+
+            // VALIDACIÓN DE EXPIRACIÓN (Rigor Técnico)
+            if (IsTokenExpired(token))
             {
-                var userData = JsonSerializer.Deserialize<LoginResponseDto>(userDataJson);
-                SetAppState(userData!);
-                return true;
+                await LogoutAsync(); // Limpiamos todo si ya no sirve
+                return false;
             }
-            return false;
+
+            var userData = JsonSerializer.Deserialize<LoginResponseDto>(userDataJson);
+            SetAppState(userData!);
+            return true;
+        }
+
+        private bool IsTokenExpired(string token)
+        {
+            try
+            {
+                var handler = new JwtSecurityTokenHandler();
+                var jwtToken = handler.ReadJwtToken(token);
+
+                // El claim "exp" está en segundos desde la época Unix
+                var expClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Exp);
+                if (expClaim == null) return true;
+
+                var expTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(expClaim.Value));
+
+                // Añadimos un "Clock Skew" de 1 minuto por seguridad
+                return expTime.UtcDateTime < DateTime.UtcNow.AddMinutes(-1);
+            }
+            catch
+            {
+                return true; // Si el token está mal formado, lo tratamos como expirado
+            }
         }
 
         public async Task<bool> LoginWithQrCodeAsync(string authCode)
         {
-
-            //await _authStorage.SaveValueAsync("last_user", "fcruz@realsystems.com.pe");
-            //await _authStorage.SaveValueAsync("last_pass_hash", "1234");
-            //SetAppState(new LoginResponseDto
-            //{
-            //    Email = "fcruz@realsystems.com.pe",
-            //    Name = "Frank Cruz",
-            //    Role = "AD"
-            //});
-            //return true;
-
-
             var request = new QrLoginRequest
             {
                 AuthCode = authCode,
@@ -225,6 +247,6 @@ namespace DikePay.Application.Services
                 return ServiceResponse<string>.Fail(ex.Message);
             }
         }
-
+      
     }
 }

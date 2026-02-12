@@ -1,7 +1,9 @@
 ﻿using DikePay.Application.Interfaces;
+using DikePay.Application.Interfaces.Maui;
 using DikePay.Application.Interfaces.Repositories;
 using DikePay.Application.Interfaces.Services;
 using DikePay.Infrastructure.ApiService;
+using DikePay.Infrastructure.Notifications;
 using DikePay.Infrastructure.Persistence;
 using DikePay.Infrastructure.Repositories;
 using DikePay.Infrastructure.Services;
@@ -27,7 +29,7 @@ namespace DikePay.Infrastructure.Extensions
             // Registramos todos los servicios de API aquí
             services.AddScoped<IArticuloApiService, ArticuloApiService>();
             services.AddScoped<IPromocionApiService, PromocionApiService>();
-
+                     
             #region Configuramos el HttpClient con Polly
             services.AddHttpClient("DikePayApi", client =>
             {

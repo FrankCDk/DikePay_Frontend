@@ -10,9 +10,14 @@
             MainPage = new AppShell();
         }
 
-        //protected override Window CreateWindow(IActivationState? activationState)
-        //{
-        //    return new Window(new MainPage()) { Title = "DikePay" };
-        //}
+        private async void RequestNotificationPermission()
+        {
+#if ANDROID
+            if (OperatingSystem.IsAndroidVersionAtLeast(33))
+            {
+                await Permissions.RequestAsync<Permissions.PostNotifications>();
+            }
+#endif
+        }
     }
 }

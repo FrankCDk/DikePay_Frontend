@@ -2,9 +2,11 @@
 @layout AuthLayout
 @using DikePay.Application.DTOs.Auth.Request
 @using DikePay.Application.Interfaces.Services
+@using DikePay.Application.Interfaces
 @using CommunityToolkit.Mvvm.Messaging
 @using DikePay.Services.Implementations
 @inject IAuthService AuthService
+@inject IAuthStorage AuthStorage
 @inject IVersionService VersionService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -19,7 +21,7 @@
         <MudText Typo="Typo.h6" Class="mt-4" Color="Color.Primary">Verificando actualizaciones...</MudText>
     </div>
 }
-else
+else if (!_sesionRedirigida)
 {
     <MudContainer MaxWidth="MaxWidth.Small">
         @* Usamos EditForm para manejar la validación automáticamente *@
@@ -31,10 +33,9 @@ else
 
                     <div class="d-flex flex-column align-center mb-4">
                         <MudImage Src="img/logo_dikepay.png"
-                                  Alt="Facweb Logo"
+                                  Alt="DikePay Logo"
                                   Elevation="0"
-                                  Width="240"
-                                  Height="95"
+                                  Width="120"
                                   Class="mb-4 transition-scale" />                       
                     </div>
 
@@ -115,6 +116,7 @@ else
 @code {
 
     private bool _comprobandoSistema = true;
+    private bool _sesionRedirigida = false;
     private LoginRequest _model = new();
     private bool _isShowPassword;
     private InputType _passwordInput = InputType.Password;
@@ -144,21 +146,17 @@ else
             _loading = true;
 
             // 1. Llamada real a nuestro AuthService híbrido (Online/Offline)
-            bool success = await AuthService.LoginAsync(_model.Email, _model.Password);
+            bool success = await AuthService.LoginAsync(_model.Email, _model.Password, _model.RememberMe);
 
             if (success)
             {
                 // 3. Navegamos al Dashboard
                 Navigation.NavigateTo("/inicio");
             }
-            else
-            {
-                Snackbar.Add("Credenciales incorrectas o sin acceso offline.", Severity.Error);
-            }
         }
         catch (Exception ex)
         {
-            Snackbar.Add("Error de conexión: " + ex.Message, Severity.Error);
+            Snackbar.Add("Error: " + ex.Message, Severity.Error);
         }
         finally
         {
@@ -178,6 +176,23 @@ else
         try
         {
             await VersionService.ValidarVersionAsync();
+
+            // 1. INTENTO DE LOGIN SILENCIOSO (Frictionless Experience)
+            bool sesionValida = await AuthService.VerificarSesionExistenteAsync();
+            if (sesionValida)
+            {
+                _sesionRedirigida = true;
+                Navigation.NavigateTo("/inicio");
+                return; // Salimos para que no parpadee el login
+            }
+
+            // 2. Si no hay sesión, cargamos los datos del "Recordar"
+            var rememberMeStr = await AuthStorage.GetValueAsync("remember_me");
+            if (bool.TryParse(rememberMeStr, out bool rememberMe) && rememberMe)
+            {
+                _model.RememberMe = true;
+                _model.Email = await AuthStorage.GetValueAsync("last_user");
+            }
         }
         catch
         {
@@ -187,8 +202,12 @@ else
         finally
         {
             // 2. Solo después de validar, mostramos el Login
-            _comprobandoSistema = false;
-            StateHasChanged();
+            if (!_sesionRedirigida)
+            {
+                _comprobandoSistema = false;
+                // StateHasChanged() no es estrictamente necesario aquí porque 
+                // OnInitializedAsync lo llama al terminar, pero ayuda en flujos complejos.
+            }
         }
     }
 

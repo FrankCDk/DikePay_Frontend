@@ -1,0 +1,83 @@
+﻿@using MudBlazor
+@page "/notificaciones"
+@using DikePay.Application.Interfaces.Services
+@using DikePay.Domain.Entities
+@inject INotificationService NotifService
+@implements IDisposable
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+        <MudText Typo="Typo.h5">Historial de Notificaciones</MudText>
+        <MudButton StartIcon="@Icons.Material.Filled.DoneAll" 
+                   Variant="Variant.Text" 
+                   Color="Color.Primary" 
+                   OnClick="MarcarTodasComoLeidas">
+            Marcar como leídas
+        </MudButton>
+    </MudStack>
+
+    @if (!NotifService.Notificaciones.Any())
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">
+            No tienes notificaciones pendientes.
+        </MudAlert>
+    }
+    else
+    {
+        <MudList T="string" Clickable="true">
+            @foreach (var notif in NotifService.Notificaciones)
+            {
+                <MudListItem Class="@(notif.Leido ? "opacity-60" : "border-l-4 border-primary")">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@GetIcon(notif.Tipo)" 
+                                 Color="@GetColor(notif.Tipo)" 
+                                 Class="mr-3" />
+                        <div>
+                            <MudText Typo="Typo.subtitle1" Inline="true" Style="font-weight: bold">
+                                @notif.Titulo
+                            </MudText>
+                            <MudText Typo="Typo.caption" Class="ml-2" Style="font-style: italic">
+                                @notif.Fecha.ToLocalTime().ToString("HH:mm")
+                            </MudText>
+                            <MudText Typo="Typo.body2">@notif.Mensaje</MudText>
+                        </div>
+                    </div>
+                </MudListItem>
+                <MudDivider />
+            }
+        </MudList>
+    }
+</MudContainer>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Suscripción al evento para reactividad en tiempo real
+        NotifService.OnChange += StateHasChanged;
+    }
+
+    private async Task MarcarTodasComoLeidas()
+    {
+        await NotifService.MarcarComoLeidas();
+    }
+
+    private string GetIcon(TipoNotificacion tipo) => tipo switch
+    {
+        TipoNotificacion.Exito => Icons.Material.Filled.CheckCircle,
+        TipoNotificacion.Error => Icons.Material.Filled.Error,
+        _ => Icons.Material.Filled.Notifications
+    };
+
+    private Color GetColor(TipoNotificacion tipo) => tipo switch
+    {
+        TipoNotificacion.Exito => Color.Success,
+        TipoNotificacion.Error => Color.Error,
+        _ => Color.Default
+    };
+
+    public void Dispose()
+    {
+        // Rigor en manejo de memoria: evitar fugas (Memory Leaks)
+        NotifService.OnChange -= StateHasChanged;
+    }
+}

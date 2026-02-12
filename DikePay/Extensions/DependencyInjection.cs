@@ -19,6 +19,7 @@ namespace DikePay.Extensions
             services.AddSingleton<IDeviceInfoService, MauiDeviceInfoService>();
             services.AddSingleton<IDialogService, MauiDialogService>();
             services.AddSingleton<ISistemaService, SistemaService>();
+            services.AddSingleton<IBadgeUpdater, BadgeUpdater>();
             return services;
         }
     }
