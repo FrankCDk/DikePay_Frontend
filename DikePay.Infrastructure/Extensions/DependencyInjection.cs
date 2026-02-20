@@ -17,19 +17,22 @@ namespace DikePay.Infrastructure.Extensions
         public static IServiceCollection AddInfrastructure(this IServiceCollection services)
         {
 
-            services.AddScoped<IDataBaseContext, DataBaseContext>();
+            #region Repositories
             services.AddScoped<IArticuloRepository, ArticuloRepository>();
-            services.AddScoped<IAlmacenamientoRepository, AlmacenamientoRepository>();
             services.AddScoped<IDocumentoRepository, DocumentoRepository>();
+            services.AddScoped<IAlmacenamientoRepository, AlmacenamientoRepository>();
             services.AddScoped<IPromocionesRepository, PromocionesRepository>();
+            #endregion
 
-            services.AddSingleton<INotificationService, NotificationService>();
+            #region Apis
             services.AddSingleton<IVersionApiService, VersionApiService>();
-
-            // Registramos todos los servicios de API aquí
             services.AddScoped<IArticuloApiService, ArticuloApiService>();
             services.AddScoped<IPromocionApiService, PromocionApiService>();
-                     
+            #endregion
+
+            services.AddScoped<IDataBaseContext, DataBaseContext>();
+            services.AddSingleton<INotificationService, NotificationService>();
+                                 
             #region Configuramos el HttpClient con Polly
             services.AddHttpClient("DikePayApi", client =>
             {
