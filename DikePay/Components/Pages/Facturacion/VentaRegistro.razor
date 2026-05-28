@@ -4,6 +4,7 @@
 @using DikePay.Helpers
 @using DikePay.Application.Interfaces.Repositories
 @using DikePay.Components.Pages.Clientes
+@using DikePay.ViewModels.Facturacion
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject BarcodeScannerService ScannerService
@@ -17,19 +18,19 @@
         padding: 4px;
     }
 
-    .custom-toggle-group .mud-toggle-item {
-        border-radius: 8px !important;
-        margin: 2px;
-        border: none !important;
-        text-transform: none;
-        font-weight: bold;
-    }
+        .custom-toggle-group .mud-toggle-item {
+            border-radius: 8px !important;
+            margin: 2px;
+            border: none !important;
+            text-transform: none;
+            font-weight: bold;
+        }
 
-    .custom-toggle-group .mud-toggle-item-selected {
-        background-color: white !important;
-        color: black !important;
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
-    }
+        .custom-toggle-group .mud-toggle-item-selected {
+            background-color: white !important;
+            color: black !important;
+            box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
+        }
 
     /* 2. ESTILOS DE LAYOUT MÓVIL */
     .total-display-compact {
@@ -45,12 +46,10 @@
     }
 
     .mobile-table-container {
-        /* Altura calculada para que el scroll sea interno y no mueva las pestañas */
         height: calc(100vh - 300px);
         overflow-y: auto;
     }
 
-    /* Limpieza de bordes de tabla para estilo App */
     .mud-table-clean .mud-table-cell {
         border-right: none !important;
         border-left: none !important;
@@ -62,36 +61,42 @@
     }
 
     body {
-        overflow: hidden; /* Evita scroll doble en móviles */
+        overflow: hidden;
     }
 
-
-    /* Ajuste para que los iconos de los inputs densos no ocupen mucho espacio */
     .mud-input-adornment-end {
         margin-left: 0 !important;
     }
-    
-    /* Para que el DatePicker móvil no sea gigante */
+
     .mud-picker-inline {
         margin-top: 0 !important;
     }
 
-    /* Forzar que el contenedor del cliente no tenga overflow que desalinee el botón */
     .d-flex.align-center.gap-2 {
         display: flex;
-        align-items: flex-start !important; /* Alineamos arriba y el margin-top del botón hace el resto */
+        align-items: flex-start !important;
     }
 
-    /* Mejora visual para los campos densos */
     .mud-input-control.mud-input-control-margin-dense {
         margin-top: 4px;
     }
 
+    .sticky-totals {
+        position: sticky;
+        top: 16px;
+    }
+
+    .financial-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
 </style>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-2 mt-md-4">
     <MudText Typo="Typo.h4" Class="mb-4 d-none d-md-block" Color="Color.Primary">
-        <b>DikePay</b> - Nueva Venta
+        Nueva Venta
     </MudText>
 
     @if (IsMobile)
@@ -99,96 +104,90 @@
         @* VISTA MÓVIL OPTIMIZADA *@
         <MudContainer Class="pa-2">
             <MudTabs Elevation="2" Rounded="true" Centered="true" Color="Color.Primary" PanelClass="pa-2">
-                
-                @* PESTAÑA 1: VENTA (Foco en velocidad de carga) *@
-                <MudTabPanel Text="Venta" Icon="@Icons.Material.Filled.ShoppingCart">
-                    
-                    @* HEADER DE IMPORTE (Siempre visible al vendedor) *@
+
+                @* PESTAÑA 1: ÍTEMS *@
+                <MudTabPanel Text="Ítems" Icon="@Icons.Material.Filled.ShoppingCart">
                     <div class="total-display-compact">
-                        <MudText Typo="Typo.subtitle2">TOTAL A COBRAR</MudText>
-                        <MudText Typo="Typo.h6"><b>@_simboloMoneda @_totalVenta.ToString("N2")</b></MudText>
+                        <MudText Typo="Typo.subtitle2">TOTAL</MudText>
+                        <MudText Typo="Typo.h6"><b>@_simboloMoneda @_venta.TotalVenta.ToString("N2")</b></MudText>
                     </div>
-
-                    @* FILA DE ENTRADA COMPACTA *@
-                    <div class="d-flex align-center gap-1 mb-2">
-                        <MudIconButton Icon="@Icons.Material.Filled.CameraAlt" Color="Color.Primary" 
-                                       Variant="Variant.Filled" OnClick="AbrirEscanner" Size="Size.Small" />
-                        
-                        <div style="flex-grow: 1; min-width: 0;">
-                            <MudAutocomplete T="Articulo" Placeholder="Producto..." @bind-Value="_productoSeleccionado"
-                                             SearchFunc="@SearchProductos" ToStringFunc="@(p => p?.Nombre)"
-                                             Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" />
-                        </div>
-
-                        <div style="width: 55px;">
-                            <MudNumericField @bind-Value="_cantidadAgregar" Placeholder="Cant" Min="1" 
-                                             Variant="Variant.Outlined" Margin="Margin.Dense" HideSpinButtons="true" />
-                        </div>
-
-                        <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Success" 
-                                       Variant="Variant.Filled" OnClick="AgregarAlCarrito" Size="Size.Small" />
-                    </div>
-
-                    @* TABLA SIN BORDES CON SCROLL INTERNO *@
+                    @RenderEntradaRapidaMovil()
                     <div class="mobile-table-container">
                         @RenderSeccionVentaSoloTabla()
                     </div>
                 </MudTabPanel>
 
-                @* PESTAÑA 2: INFO Y CIERRE DE VENTA *@
-                <MudTabPanel Text="Pagar" Icon="@Icons.Material.Filled.CheckCircle">
+                @* PESTAÑA 2: COMPROBANTE *@
+                <MudTabPanel Text="Documento" Icon="@Icons.Material.Filled.Receipt">
                     <MudStack Spacing="3" Class="mt-2">
                         @RenderSeccionComprobante()
-                        
-                        <MudDivider Class="my-2" />
-                        
-                        <div class="pa-4 mud-text-align-center">
-                            <MudText Typo="Typo.body1" Color="Color.Secondary">Resumen de cobro</MudText>
-                            <MudText Typo="Typo.h4" Class="mb-6"><b>@_simboloMoneda @_totalVenta.ToString("N2")</b></MudText>
-                            
-                            <MudButton Variant="Variant.Filled" 
-                                       Color="Color.Warning" 
-                                       FullWidth="true" 
-                                       Size="Size.Large"
-                                       Disabled="@(!_carrito.Any())"
-                                       OnClick="ProcesarPago"
-                                       Style="height: 64px; font-weight: 900; font-size: 1.3rem; color: black;">
-                                FINALIZAR Y PAGAR
-                            </MudButton>
-                        </div>
                     </MudStack>
                 </MudTabPanel>
+
+                @* PESTAÑA 3: TOTALES Y PAGO *@
+                <MudTabPanel Text="Cobrar" Icon="@Icons.Material.Filled.Payment">
+                    <MudStack Spacing="3" Class="mt-2">
+                        @RenderPanelTotalesDetallados()
+                    </MudStack>
+                </MudTabPanel>
+
             </MudTabs>
         </MudContainer>
     }
     else
     {
-        @* VISTA ESCRITORIO (Standard MudGrid) *@
-        <MudGrid Spacing="2">
-            <MudItem xs="12" md="4">
-                <MudStack Spacing="3">
-                    @RenderSeccionComprobante()
-                </MudStack>
-            </MudItem>
-
+        @* VISTA ESCRITORIO: Layout 8 / 4 *@
+        <MudGrid Spacing="3">
+            @* LADO IZQUIERDO: Trabajo *@
             <MudItem xs="12" md="8">
                 <MudStack Spacing="3">
+                    @RenderSeccionComprobante()
                     @RenderSeccionVenta()
                 </MudStack>
             </MudItem>
 
-            <MudItem xs="12">
-                @RenderBarraAccion()
+            @* LADO DERECHO: Totales y Cobro (Sticky) *@
+            <MudItem xs="12" md="4">
+                <div class="sticky-totals">
+                    @RenderPanelTotalesDetallados()
+                </div>
             </MudItem>
         </MudGrid>
     }
 </MudContainer>
 
-
 @code {
+    // --- ESTADO GLOBAL DE LA VISTA ---
+    private VentaCabeceraViewModel _venta = new();
+    private List<VentaDetalleViewModel> _detalle = new();
+    private List<Articulo> _productosDisponibles = new();
+    private Articulo? _productoSeleccionado;
+    private decimal _cantidadAgregar = 1;
+    private decimal _descuentoAgregar = 0;
 
-    RenderFragment RenderSeccionVentaSoloTabla() => __builder => {
-        <MudTable Items="@_carrito" Hover="true" Elevation="0" Dense="true" Bordered="false" Class="mud-table-clean">
+    // Listado simulado para el autocompletado
+    private List<string> _clientesFrecuentes = new() { "Público General", "Empresa ABC SAC", "Juan Pérez", "María García" };
+
+    private bool IsMobile => DeviceInfo.Current.Platform == DevicePlatform.Android || DeviceInfo.Current.Platform == DevicePlatform.iOS;
+    private string _simboloMoneda => _venta.Moneda == "PEN" ? "S/" : "$";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _productosDisponibles = await ArticuloRepository.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error al cargar productos: " + ex.Message, Severity.Error);
+        }
+    }
+
+    // --- FRAGMENTOS DE RENDERIZADO (UI) ---
+
+    RenderFragment RenderSeccionVentaSoloTabla() => __builder =>
+    {
+        <MudTable Items="@_detalle" Hover="true" Elevation="0" Dense="true" Bordered="false" Class="mud-table-clean">
             <HeaderContent>
                 <MudTh>Detalle</MudTh>
                 <MudTh Style="text-align:right">Total</MudTh>
@@ -196,11 +195,11 @@
             </HeaderContent>
             <RowTemplate>
                 <MudTd>
-                    <MudText Typo="Typo.body2" Style="font-size: 0.85rem; line-height: 1.1;"><b>@context.Producto.Nombre</b></MudText>
-                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Cantidad x @context.PrecioUnitario</MudText>
+                    <MudText Typo="Typo.body2" Style="font-size: 0.85rem; line-height: 1.1;"><b>@context.Descripcion</b></MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.Cantidad x @context.PrecioUnitario.ToString("N2")</MudText>
                 </MudTd>
                 <MudTd Style="text-align:right; vertical-align: middle;">
-                    <MudText Typo="Typo.body2"><b>@context.Subtotal.ToString("N2")</b></MudText>
+                    <MudText Typo="Typo.body2"><b>@context.Total.ToString("N2")</b></MudText>
                 </MudTd>
                 <MudTd Style="text-align:right; width: 40px;">
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => EliminarItem(context))" />
@@ -209,163 +208,155 @@
         </MudTable>
     };
 
-RenderFragment RenderSeccionComprobante() => __builder => {
-    <MudPaper Class="pa-3" Elevation="1">
-        <MudText Typo="Typo.caption" Class="mb-3 d-block" Style="font-weight: bold; color: gray; letter-spacing: 1px;">
-            DATOS DEL COMPROBANTE
-        </MudText>
-        
-        <MudGrid Spacing="2">
-            @* Fila 1: Tipo de Documento *@
-            <MudItem xs="12" Class="mb-4">
-                <MudToggleGroup T="string" @bind-Value="_tipoDoc" Delimiters="false" 
-                                Size="Size.Small" Class="mud-width-full custom-toggle-group">
-                    <MudToggleItem Value="@("Boleta")" Text="Boleta" />
-                    <MudToggleItem Value="@("Factura")" Text="Factura" />
-                </MudToggleGroup>
-            </MudItem>
-
-            @* Fila 2: Fecha y Moneda (Separados con spacing) *@
-            <MudItem xs="6">
-                <MudDatePicker Label="Fecha Emisión" @bind-Date="_fechaEmision" 
-                               Variant="Variant.Outlined" Margin="Margin.Dense" 
-                               DateFormat="dd/MM/yyyy" Editable="true" />
-            </MudItem>
-
-            <MudItem xs="6">
-                <MudSelect T="string" Label="Moneda" @bind-Value="_moneda" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
-                    <MudSelectItem Value="@("PEN")">
-                        <div class="d-flex align-center">
-                            <MudText Typo="Typo.body2" Class="mr-2"><b>S/</b></MudText> Soles
-                        </div>
-                    </MudSelectItem>
-                    <MudSelectItem Value="@("USD")">
-                        <div class="d-flex align-center">
-                            <MudText Typo="Typo.body2" Class="mr-2"><b>$</b></MudText> Dólares
-                        </div>
-                    </MudSelectItem>
-                </MudSelect>
-            </MudItem>
-
-            @* Fila 3: Cliente (Alineación corregida) *@
-            <MudItem xs="12" Class="mt-4">
-                <div class="d-flex align-center gap-2">
-                    <div style="flex-grow: 1;">
-                        <MudAutocomplete T="string" Label="Cliente" @bind-Value="_clienteNombre" SearchFunc="@SearchClientes"
-                                       Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" 
-                                       ResetValueOnEmptyText="true" CoerceText="true"
-                                       AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Primary" />
-                    </div>
-                    @* El margin-top compensa el espacio de la "Label" del input para que el botón baje *@
-                    <div style="margin-top: 8px;">
-                        <MudTooltip Text="Nuevo Cliente">
-                            <MudIconButton Icon="@Icons.Material.Filled.PersonAdd" Color="Color.Success" 
-                                           Variant="Variant.Filled" OnClick="AbrirRegistroCliente" Size="Size.Medium" 
-                                           Style="height: 37px; width: 40px; border-radius: 8px;" />
-                        </MudTooltip>
-                    </div>
-                </div>
-            </MudItem>
-        </MudGrid>
-    </MudPaper>
-};
-
-RenderFragment RenderSeccionVenta() => __builder => {
+    RenderFragment RenderSeccionVenta() => __builder =>
+    {
         <MudPaper Class="pa-4" Elevation="1">
             <div class="d-flex align-center gap-2 mb-4">
                 <MudAutocomplete T="Articulo" Label="Producto" @bind-Value="_productoSeleccionado"
                                  SearchFunc="@SearchProductos" ToStringFunc="@(p => p?.Nombre)"
                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="flex-grow-1" />
-                <MudNumericField @bind-Value="_cantidadAgregar" Label="Cant." Min="1" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 80px;" />
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AgregarAlCarrito" Style="height: 40px;">Agregar</MudButton>
+                @* Se cambió Min="0.001" por Min="0.001m" *@
+                <MudNumericField @bind-Value="_cantidadAgregar" Label="Cant." Min="0.001m" Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 80px;" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="AgregarAlCarritoManual" Style="height: 40px;">Agregar</MudButton>
             </div>
             @RenderSeccionVentaSoloTabla()
         </MudPaper>
     };
 
-    // 2. BARRA DE ACCIÓN PERSISTENTE
-    RenderFragment RenderBarraAccion() => __builder => {
-        bool tieneItems = _carrito.Any();
-        
-        <MudPaper Class="pa-4 d-flex justify-space-between align-center" Elevation="4" 
-                  Style="@($"background-color: var(--mud-palette-primary); color: white; border-radius: 12px;")">
-            <div>
-                <MudText Typo="Typo.caption" Style="opacity: 0.8; line-height: 1;">TOTAL A COBRAR</MudText>
-                <MudText Typo="Typo.h5"><b>@_simboloMoneda @_totalVenta.ToString("N2")</b></MudText>
+    RenderFragment RenderEntradaRapidaMovil() => __builder =>
+    {
+        <div class="d-flex align-center gap-1 mb-2">
+            <MudIconButton Icon="@Icons.Material.Filled.CameraAlt" Color="Color.Primary" Variant="Variant.Filled" OnClick="AbrirEscanner" Size="Size.Small" />
+            <div style="flex-grow: 1; min-width: 0;">
+                <MudAutocomplete T="Articulo" Placeholder="Producto..." @bind-Value="_productoSeleccionado"
+                                 SearchFunc="@SearchProductos" ToStringFunc="@(p => p?.Nombre)"
+                                 Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true" />
             </div>
-            <MudButton Variant="Variant.Filled" 
-                       Color="@(tieneItems ? Color.Warning : Color.Surface)" 
-                       Size="Size.Large" 
-                       Disabled="@(!tieneItems)" 
-                       OnClick="ProcesarPago" 
-                       Style="@($"font-weight: 900; min-width: 120px; {(tieneItems ? "color: black;" : "color: var(--mud-palette-primary);")}")">
-                PAGAR
+            <div style="width: 55px;">
+                @* Se cambió Min="0.001" por Min="0.001m" *@
+                <MudNumericField @bind-Value="_cantidadAgregar" Placeholder="Cant" Min="0.001m" Variant="Variant.Outlined" Margin="Margin.Dense" HideSpinButtons="true" />
+            </div>
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Color="Color.Success" Variant="Variant.Filled" OnClick="AgregarAlCarritoManual" Size="Size.Small" />
+        </div>
+    };
+
+    RenderFragment RenderSeccionComprobante() => __builder =>
+    {
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudText Typo="Typo.caption" Class="mb-3 d-block" Style="font-weight: bold; color: gray;">
+                DATOS DEL COMPROBANTE
+            </MudText>
+
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="4" md="3">
+                    <MudToggleGroup T="string" @bind-Value="_venta.TipoDocumento" Delimiters="false" Size="Size.Small" Class="mud-width-full custom-toggle-group">
+                        <MudToggleItem Value="@("BV")" Text="Boleta" />
+                        <MudToggleItem Value="@("FT")" Text="Factura" />
+                    </MudToggleGroup>
+                </MudItem>
+
+                <MudItem xs="12" sm="2" md="3">
+                    <MudSelect T="string" Label="Serie" @bind-Value="_venta.Serie" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                        <MudSelectItem Value="@("F001")">F001</MudSelectItem>
+                        <MudSelectItem Value="@("B001")">B001</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="3" md="3">
+                    <MudSelect T="string" Label="Moneda" @bind-Value="_venta.Moneda" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                        <MudSelectItem Value="@("PEN")">S/ Soles</MudSelectItem>
+                        <MudSelectItem Value="@("USD")">$ Dólares</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="3" md="3">
+                    <MudDatePicker Label="Fecha Emisión" @bind-Date="_venta.FechaEmision" Variant="Variant.Outlined" Margin="Margin.Dense" DateFormat="dd/MM/yyyy" Editable="true" />
+                </MudItem>
+
+                <MudItem xs="12" sm="9" Style="@(IsMobile ? "order: 2;" : "order: 1;")">
+                    <div class="d-flex align-center gap-2">
+                        <MudAutocomplete T="string" Label="Cliente / Razón Social" @bind-Value="_venta.NombreCliente" SearchFunc="@SearchClientes"
+                                         Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true"
+                                         AdornmentIcon="@Icons.Material.Filled.Search" Class="flex-grow-1" />
+                        <MudIconButton Icon="@Icons.Material.Filled.PersonAdd" Color="Color.Success" Variant="Variant.Filled"
+                                       OnClick="AbrirRegistroCliente" Size="Size.Medium" Style="margin-top: 4px; height: 38px;" />
+                    </div>
+                </MudItem>
+
+                <MudItem xs="12" sm="3" Style="@(IsMobile ? "order: 1;" : "order: 2;")">
+                    <MudSelect T="string" Label="Condición de Venta" @bind-Value="_venta.CondicionVenta" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                        <MudSelectItem Value="@("Contado")">Contado</MudSelectItem>
+                        <MudSelectItem Value="@("Credito")">Crédito a 30 días</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" Style="order: 3;">
+                    <MudTextField T="string" Label="Dirección" @bind-Value="_venta.DireccionCliente" Variant="Variant.Outlined" Margin="Margin.Dense" ReadOnly="true" />
+                </MudItem>
+            </MudGrid>
+
+            <MudExpansionPanels Elevation="0" Class="mt-3">
+                <MudExpansionPanel Text="Opciones Avanzadas (Guía, Vendedor, Placa)" Style="background-color: #fafafa; border-radius: 8px;">
+                    <MudGrid Spacing="2" Class="mt-1">
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="string" Label="Vendedor" @bind-Value="_venta.Vendedor" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                                <MudSelectItem Value="@("V1")">Vendedor Principal</MudSelectItem>
+                                <MudSelectItem Value="@("V2")">Vendedor Secundario</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                    </MudGrid>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        </MudPaper>
+    };
+
+    RenderFragment RenderPanelTotalesDetallados() => __builder =>
+    {
+        bool tieneItems = _detalle.Any();
+
+        <MudPaper Class="pa-4 d-flex flex-column" Elevation="2">
+            <div class="d-flex align-center mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Primary" Class="mr-2" />
+                <MudText Typo="Typo.subtitle1" Color="Color.Primary"><b>RESUMEN FINANCIERO</b></MudText>
+            </div>
+
+            <div class="financial-row">
+                <MudText Typo="Typo.body2">VAL. VTA. BRUTO</MudText>
+                <MudText Typo="Typo.body2">@_simboloMoneda _venta.ValVentaBruto.ToString("N2")</MudText>
+            </div>
+            <div class="financial-row">
+                <MudText Typo="Typo.body2">DESCUENTO</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Error">- @_simboloMoneda _venta.DescuentoTotal.ToString("N2")</MudText>
+            </div>
+            <div class="financial-row">
+                <MudText Typo="Typo.body2">IGV (18%)</MudText>
+                <MudText Typo="Typo.body2">@_simboloMoneda _venta.IgvTotal.ToString("N2")</MudText>
+            </div>
+            <div class="financial-row">
+                <MudText Typo="Typo.body2">ICBPER (Bolsas)</MudText>
+                <MudText Typo="Typo.body2">@_simboloMoneda _venta.IcbperTotal.ToString("N2")</MudText>
+            </div>
+
+            <MudDivider Class="my-3" />
+
+            <div class="financial-row mb-6">
+                <MudText Typo="Typo.h6" Color="Color.Primary"><b>TOTAL NETO</b></MudText>
+                <MudText Typo="Typo.h5" Color="Color.Primary"><b>@_simboloMoneda _venta.TotalVenta.ToString("N2")</b></MudText>
+            </div>
+
+            <MudButton Variant="Variant.Filled"
+                       Color="@(tieneItems ? Color.Warning : Color.Surface)"
+                       FullWidth="true"
+                       Size="Size.Large"
+                       Disabled="@(!tieneItems)"
+                       OnClick="ProcesarPago"
+                       Style="@($"height: 64px; font-weight: 900; font-size: 1.2rem; {(tieneItems ? "color: black;" : "color: gray;")}")">
+                FINALIZAR VENTA
             </MudButton>
         </MudPaper>
     };
 
-
-
-
-
-    // Datos de Cabecera
-    private string _tipoDoc = "Boleta";
-    private string _moneda = "PEN";
-    private string _vendedor = "Juan Programador"; // Simular usuario logueado
-    private string _clienteNombre = "Público General";
-    private string _simboloMoneda => _moneda == "PEN" ? "S/" : "$";
-    private decimal _descuentoAgregar = 0;
-    private DateTime? _fechaEmision = DateTime.Today;
-    private bool IsMobile => DeviceInfo.Current.Platform == DevicePlatform.Android || DeviceInfo.Current.Platform == DevicePlatform.iOS;
-
-    private List<Articulo> _productosDisponibles;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            _productosDisponibles = await CargarProductos();
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add("Error al cargar productos: " + ex.Message, Severity.Error);
-        }
-    }
-
-    private async Task<List<Articulo>> CargarProductos()
-    {
-        return await ArticuloRepository.GetAllAsync();
-    }
-
-    private async Task AbrirRegistroCliente()
-    {
-        var options = new DialogOptions { 
-            CloseButton = true, 
-            MaxWidth = MaxWidth.ExtraSmall, 
-            FullWidth = true,
-            BackdropClick = true 
-        };
-
-        // Aquí llamarías a tu componente de diálogo para crear cliente
-        var dialog = await DialogService.ShowAsync<NuevoClienteDialog>("Registrar Cliente", options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled && result.Data != null)
-        {
-            // Supongamos que el diálogo devuelve el nombre o el objeto cliente
-            _clienteNombre = result.Data.ToString();
-            // Opcional: recargar lista de clientes frecuentes
-            Snackbar.Add("Cliente registrado y seleccionado", Severity.Success);
-        }
-    }
-
-
-    private List<string> _clientesFrecuentes = new() { "Público General", "Empresa ABC SAC", "Juan Pérez", "María García" };
-
-    private List<DetalleVenta> _carrito = new();
-    private Articulo? _productoSeleccionado;
-    private int _cantidadAgregar = 1;
-    private decimal _totalVenta => _carrito.Sum(x => x.Subtotal);
+    // --- LÓGICA DE NEGOCIO Y MANEJO DE EVENTOS ---
 
     private async Task<IEnumerable<string>> SearchClientes(string value, CancellationToken token)
     {
@@ -377,26 +368,13 @@ RenderFragment RenderSeccionVenta() => __builder => {
     {
         if (string.IsNullOrEmpty(value)) return _productosDisponibles;
         return _productosDisponibles.Where(x => x.Nombre.Contains(value, StringComparison.InvariantCultureIgnoreCase) ||
-                                               x.CodigoSku.Contains(value, StringComparison.InvariantCultureIgnoreCase));
+                                                 x.CodigoSku.Contains(value, StringComparison.InvariantCultureIgnoreCase));
     }
 
-    private void AgregarAlCarrito()
+    private void AgregarAlCarritoManual()
     {
         if (_productoSeleccionado == null) return;
-
-        var itemExistente = _carrito.FirstOrDefault(x => x.Producto.Codigo == _productoSeleccionado.Codigo);
-
-        if (itemExistente != null)
-        {
-            itemExistente.Cantidad += _cantidadAgregar;
-            itemExistente.Descuento = _descuentoAgregar;
-        }
-        else
-        {
-            // Usamos el constructor que "congela" el precio
-            var nuevoDetalle = new DetalleVenta(_productoSeleccionado, _cantidadAgregar, _descuentoAgregar);
-            _carrito.Add(nuevoDetalle);
-        }
+        EjecutarAgregarItem(_productoSeleccionado, _cantidadAgregar, _descuentoAgregar);
 
         _productoSeleccionado = null;
         _cantidadAgregar = 1;
@@ -404,7 +382,78 @@ RenderFragment RenderSeccionVenta() => __builder => {
         StateHasChanged();
     }
 
-    private void EliminarItem(DetalleVenta item) => _carrito.Remove(item);
+    private void EjecutarAgregarItem(Articulo prod, decimal cantidad, decimal descuentoPorcentaje)
+    {
+        var itemExistente = _detalle.FirstOrDefault(x => x.ArticuloId == prod.Id);
+
+        if (itemExistente != null)
+        {
+            itemExistente.Cantidad += cantidad;
+            itemExistente.PorcentajeDescuento = descuentoPorcentaje;
+        }
+        else
+        {
+            _detalle.Add(new VentaDetalleViewModel
+            {
+                ArticuloId = prod.Id,
+                CodigoArticulo = prod.Codigo,
+                Descripcion = prod.Nombre,
+                Unidad = prod.Unidad,
+                Cantidad = cantidad,
+                PrecioUnitario = prod.Precio,
+                PorcentajeDescuento = descuentoPorcentaje,
+                TipoAfectacion = prod.TipoAfectacion
+            });
+        }
+        RecalcularEstructuraFinanciera();
+    }
+
+    private void EliminarItem(VentaDetalleViewModel item)
+    {
+        _detalle.Remove(item);
+        RecalcularEstructuraFinanciera();
+    }
+
+    private void RecalcularEstructuraFinanciera()
+    {
+        // Reseteamos totales
+        _venta.ValVentaBruto = 0;
+        _venta.DescuentoTotal = 0;
+        _venta.IgvTotal = 0;
+        _venta.IcbperTotal = 0;
+        _venta.TotalVenta = 0;
+
+        foreach (var item in _detalle)
+        {
+            _venta.DescuentoTotal += item.DescuentoImporte;
+            _venta.TotalVenta += item.Total;
+
+            // Lógica base peruana: Si es Gravado (GR), desglosamos el IGV (Asumiendo que precio incluye IGV)
+            if (item.TipoAfectacion == "GR")
+            {
+                decimal valorVentaLinea = item.Total / 1.18m;
+                _venta.IgvTotal += item.Total - valorVentaLinea;
+                _venta.ValVentaBruto += valorVentaLinea;
+            }
+            else
+            {
+                _venta.ValVentaBruto += item.Total; // Inafectos o Exonerados
+            }
+        }
+    }
+
+    private async Task AbrirRegistroCliente()
+    {
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, BackdropClick = true };
+        var dialog = await DialogService.ShowAsync<NuevoClienteDialog>("Registrar Cliente", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data != null)
+        {
+            _venta.NombreCliente = result.Data.ToString()!;
+            Snackbar.Add("Cliente registrado y seleccionado", Severity.Success);
+        }
+    }
 
     private async Task AbrirEscanner()
     {
@@ -422,64 +471,41 @@ RenderFragment RenderSeccionVenta() => __builder => {
         }
     }
 
-
     private async Task BuscarYAgregarPorSku(string sku)
     {
         var prod = _productosDisponibles.FirstOrDefault(x => x.CodigoSku == sku);
 
         if (prod != null)
         {
-            // 1. Definimos los parámetros usando strings para evitar el error de la lambda
             var parameters = new DialogParameters();
             parameters.Add("Articulo", prod);
             parameters.Add("CantidadInicial", 1);
 
-            var options = new DialogOptions
+            var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, BackdropClick = false };
+
+            try
             {
-                CloseButton = true,
-                MaxWidth = MaxWidth.ExtraSmall,
-                FullWidth = true,
-                BackdropClick = false // Obliga al vendedor a interactuar
-            };
-
-            // 2. Llamamos al diálogo (asegúrate que el nombre coincida con el archivo .razor)
-            try {
-
                 var dialog = await DialogService.ShowAsync<EdicionRapidaItemDialog>("Confirmar Producto", parameters, options);
                 var result = await dialog.Result;
 
                 if (!result.Canceled && result.Data != null)
                 {
-                    // 3. Leemos los datos ajustados (usando dynamic para facilidad)
                     dynamic data = result.Data;
                     int cant = data.CantidadSeleccionada;
                     decimal precio = data.PrecioAplicado;
 
-                    // 4. Agregamos al carrito con los valores finales
-                    var itemExistente = _carrito.FirstOrDefault(x => x.Producto.Codigo == prod.Codigo);
-                    if (itemExistente != null)
-                    {
-                        itemExistente.Cantidad += cant;
-                        itemExistente.PrecioUnitario = precio; // Actualizamos por si hubo oferta
-                    }
-                    else
-                    {
-                        var nuevoDetalle = new DetalleVenta(prod, cant, 0) { PrecioUnitario = precio };
-                        _carrito.Add(nuevoDetalle);
-                    }
+                    // Como forzamos precio de oferta desde el modal, inyectamos temporalmente
+                    prod.Precio = precio;
+                    EjecutarAgregarItem(prod, cant, 0);
 
                     StateHasChanged();
                     Snackbar.Add($"{prod.Nombre} agregado.", Severity.Success);
                 }
-
-            } catch(Exception ex)
+            }
+            catch (Exception)
             {
-                Console.WriteLine($"ERROR CRÍTICO AL LANZAR: {ex.Message}");
                 Snackbar.Add("Error interno al abrir el diálogo", Severity.Error);
             }
-
-
-            
         }
         else
         {
@@ -487,34 +513,10 @@ RenderFragment RenderSeccionVenta() => __builder => {
         }
     }
 
-    // Método auxiliar para evitar duplicados y sumar cantidades
-    private void AgregarDetalleAlCarrito(DetalleVenta nuevoDetalle)
-    {
-        var existente = _carrito.FirstOrDefault(x => x.Producto.Codigo == nuevoDetalle.Producto.Codigo);
-        if (existente != null)
-        {
-            existente.Cantidad += nuevoDetalle.Cantidad;
-            // Si el precio cambió por una oferta manual, actualizamos o promediamos
-            existente.PrecioUnitario = nuevoDetalle.PrecioUnitario;
-        }
-        else
-        {
-            _carrito.Add(nuevoDetalle);
-        }
-    }
-
     private async Task ProcesarPago()
     {
-        // 1. DIÁLOGO DE PAGO: Capturamos cómo paga el cliente
-        var parametersPago = new DialogParameters<PagoDialog> { { x => x.TotalVenta, _totalVenta } };
-        var optionsStandard = new DialogOptions
-        {
-            CloseOnEscapeKey = true,
-            CloseButton = true,
-            MaxWidth = MaxWidth.ExtraLarge,
-            FullWidth = true,
-            BackdropClick = false
-        };
+        var parametersPago = new DialogParameters<PagoDialog> { { x => x.TotalVenta, _venta.TotalVenta } };
+        var optionsStandard = new DialogOptions { CloseOnEscapeKey = true, CloseButton = true, MaxWidth = MaxWidth.Large, FullWidth = true, BackdropClick = false };
 
         var dialogPago = await DialogService.ShowAsync<PagoDialog>("Cobrar Venta", parametersPago, optionsStandard);
         var resultPago = await dialogPago.Result;
@@ -522,20 +524,26 @@ RenderFragment RenderSeccionVenta() => __builder => {
         if (resultPago.Canceled || resultPago.Data == null) return;
         dynamic datosPago = resultPago.Data;
 
-        // 2. PREPARAR LA ENTIDAD VENTA: Armamos el objeto final
+        // --- MAPEO DIRECTO DESDE NUESTROS VIEWMODELS A LA ENTIDAD DE BASE DE DATOS LOCAL ---
         var ventaParaGuardar = new Venta
         {
-            Serie = _tipoDoc == "Boleta" ? "B001" : "F001",
-            Numero = "PROVISIONAL", // El repo debería asignar el correlativo real
-            FechaEmision = _fechaEmision ?? DateTime.Now,
-            TipoComprobante = _tipoDoc == "Boleta" ? "03" : "01",
-            ClienteNombre = _clienteNombre,
-            Moneda = _moneda,
-            Total = _totalVenta,
-            Items = _carrito.ToList()
+            Serie = _venta.Serie,
+            Numero = "PROVISIONAL",
+            FechaEmision = _venta.FechaEmision ?? DateTime.Now,
+            TipoComprobante = _venta.TipoDocumento == "BV" ? "03" : "01",
+            ClienteNombre = _venta.NombreCliente,
+            Moneda = _venta.Moneda,
+            Total = _venta.TotalVenta,
+            // Mapeamos las líneas del carrito a la entidad SQLite esperada
+            Items = _detalle.Select(d => new DetalleVenta
+            {
+                Cantidad = (int)d.Cantidad,
+                PrecioUnitario = d.PrecioUnitario,
+                Descuento = d.DescuentoImporte
+                // Nota: Tu constructor original de DetalleVenta acepta un 'Articulo', asegúrate de mapearlo correctamente según tu Domain
+            }).ToList()
         };
 
-        // 3. REGISTRO LOCAL CON TRACKING: Feedback visual rápido
         var parametersTracking = new DialogParameters { ["VentaData"] = ventaParaGuardar };
         var optionsTracking = new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true, NoHeader = true };
 
@@ -544,31 +552,21 @@ RenderFragment RenderSeccionVenta() => __builder => {
 
         if (!resultTracking.Canceled)
         {
-            // 4. ¡ÉXITO LOCAL!
-            // Disparamos el envío a SUNAT en background (Fire and Forget)
-            // Esto evita que el vendedor espere a que el servidor de SUNAT responda
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    // await FacturacionService.EnviarASunatAsync(ventaParaGuardar);
-                }
-                catch { /* El Worker de fondo reintentará luego */ }
-            });
+            // Simulación de Fire and Forget para sincronización en background
+            _ = Task.Run(async () => { try { } catch { } });
 
-            // 5. MOSTRAR TICKET: El cliente ya quiere su comprobante
-            var productosParaTicket = _carrito.Select(item => new TicketItemDto
+            var productosParaTicket = _detalle.Select(item => new TicketItemDto
             {
-                Nombre = item.Producto.Nombre,
+                Nombre = item.Descripcion,
                 Precio = item.PrecioUnitario,
-                Cantidad = item.Cantidad
+                Cantidad = (int)item.Cantidad
             }).ToList();
 
             await MostrarTicketExitoso(datosPago, productosParaTicket);
 
-            // Limpieza de interfaz
-            _carrito.Clear();
-            _clienteNombre = "Público General";
+            // Limpieza de estados usando las propiedades de la clase limpia
+            _detalle.Clear();
+            _venta = new VentaCabeceraViewModel();
             Snackbar.Add("Venta completada", Severity.Success);
             StateHasChanged();
         }
@@ -576,7 +574,6 @@ RenderFragment RenderSeccionVenta() => __builder => {
 
     private async Task MostrarTicketExitoso(dynamic datos, List<TicketItemDto> productos)
     {
-        // Mapeamos los pagos realizados del resultado del diálogo de pago
         var listaPagos = ((List<PagoDialog.PagoDetalle>)datos.Pagos).Select(p => new VentaExitosaDialog.PagoDetalleDto
         {
             Metodo = p.Metodo,
@@ -585,23 +582,15 @@ RenderFragment RenderSeccionVenta() => __builder => {
 
         var parametersExito = new DialogParameters<VentaExitosaDialog>
         {
-            { x => x.TotalPagado, (decimal)datos.TotalFinal }, // El total real de la venta
+            { x => x.TotalPagado, (decimal)datos.TotalFinal },
             { x => x.Descuento, (decimal)datos.Descuento },
             { x => x.Vuelto, (decimal)datos.Vuelto },
-            { x => x.PagosRealizados, listaPagos }, // Lista de todos los medios usados
+            { x => x.PagosRealizados, listaPagos },
             { x => x.ProductosVendidos, productos },
-            { x => x.SerieNumero, $"B001-{DateTime.Now:mmssff}" }
+            { x => x.SerieNumero, $"{_venta.Serie}-{DateTime.Now:mmssff}" }
         };
 
-        var options = new DialogOptions
-        {
-            CloseButton = false,
-            BackdropClick = false, // Evita que lo cierren sin querer
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        };
-
+        var options = new DialogOptions { CloseButton = false, BackdropClick = false, MaxWidth = MaxWidth.Small, FullWidth = true };
         await DialogService.ShowAsync<VentaExitosaDialog>("Comprobante", parametersExito, options);
     }
-
 }

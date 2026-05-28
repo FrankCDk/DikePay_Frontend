@@ -1,6 +1,8 @@
 ﻿using DikePay.Application.Interfaces.Repositories;
 using DikePay.Application.Interfaces.Services;
+using DikePay.Application.Interfaces.Sync;
 using DikePay.Application.Services;
+using DikePay.Application.Services.Sync;
 using DikePay.Shared.State;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,14 +15,17 @@ namespace DikePay.Application.Extensions
             services.AddScoped<ISyncWorkerService, SyncWorkerService>();
             services.AddScoped<IArticuloService, ArticuloService>();
             services.AddScoped<IAuthService, AuthService>();
-            services.AddScoped<ISyncService, SyncService>();
+            
             services.AddScoped<IVersionService, VersionService>();
             services.AddScoped<IAlmacenamientoService, AlmacenamientoService>();
             //services.AddScoped<IComandaRepository, ComandaService>();
             services.AddScoped<IVentaService, VentaService>();
             services.AddScoped<IFacturacionQueueService, FacturacionQueueService>();
+
             // Registramos el estado de la aplicación como singleton
             services.AddSingleton<AppState>();
+            services.AddSingleton<ISyncWorkerService, SyncWorkerService>();
+            services.AddSingleton<ISincronizable, ArticuloSyncService>();
 
             return services;
         }

@@ -23,10 +23,7 @@ namespace DikePay.Application.DTOs.Articulos.Response
         [JsonPropertyName("price")]
         public decimal Precio { get; set; }
 
-        [JsonPropertyName("stock")]
-        public decimal Stock { get; set; }
-
-        [JsonPropertyName("stockMin")]
+        [JsonPropertyName("stockMinimo")]
         public decimal StockMinimo { get; set; }
 
         [JsonPropertyName("taxProductCode")]

@@ -1,4 +1,5 @@
 ﻿using DikePay.Application.Interfaces;
+using DikePay.Application.Interfaces.Api;
 using DikePay.Application.Interfaces.Maui;
 using DikePay.Application.Interfaces.Repositories;
 using DikePay.Application.Interfaces.Services;
@@ -36,9 +37,9 @@ namespace DikePay.Infrastructure.Extensions
             #region Configuramos el HttpClient con Polly
             services.AddHttpClient("DikePayApi", client =>
             {
-                client.BaseAddress = new Uri("http://172.29.0.1:9000/api/v1/"); // IpConfig - Laptop Cambia esto por tu URL real
+                //client.BaseAddress = new Uri("http://172.29.0.1:9000/api/v1/"); // IpConfig - Laptop Cambia esto por tu URL real
                 //client.BaseAddress = new Uri("http://192.168.68.101:9000/api/v1/"); //  Moviles
-                //client.BaseAddress = new Uri("https://localhost:44361/api/v1/");
+                client.BaseAddress = new Uri("https://localhost:44361/api/v1/");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
             })
             .AddTransientHttpErrorPolicy(policy =>

@@ -21,7 +21,7 @@ namespace DikePay.Infrastructure.ApiService
         {
             try
             {
-                var url = $"versions/latest?platform={plataforma}&currentBuild={buildActual}";
+                var url = $"versiones/ultima?platform={plataforma}&currentBuild={buildActual}";
                 var response = await _httpClient.GetFromJsonAsync<VersionResponseDto>(url);
 
                 return response ?? new VersionResponseDto { ActualizacionDisponible = false };

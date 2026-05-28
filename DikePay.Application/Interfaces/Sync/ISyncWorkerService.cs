@@ -1,4 +1,4 @@
-﻿namespace DikePay.Application.Interfaces.Services
+﻿namespace DikePay.Application.Interfaces.Sync
 {
     public interface ISyncWorkerService
     {

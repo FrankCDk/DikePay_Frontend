@@ -43,7 +43,7 @@
             <MudTd DataLabel="Nombre">@context.Nombre</MudTd>
             <MudTd DataLabel="Precio" Style="text-align: right;">@context.Precio.ToString("C2")</MudTd>
             <MudTd DataLabel="SKU">@context.CodigoSku</MudTd>
-            <MudTd DataLabel="Stock">@context.Stock</MudTd>
+            <MudTd DataLabel="Stock">@context.StockMinimo</MudTd>
             <MudTd Style="text-align: center;">
                 <MudIconButton Icon="@Icons.Material.Outlined.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditarArticulo(context))" />
                 <MudIconButton Icon="@Icons.Material.Outlined.QrCode" Color="Color.Info" Size="Size.Small" OnClick="@(() => MostrarBarcode(context))" Disabled="@(string.IsNullOrEmpty(context.CodigoSku))" />
@@ -114,7 +114,6 @@
             Nombre = articulo.Nombre,
             //Descripcion = articulo.Descripcion,
             Precio = articulo.Precio,
-            Stock = articulo.Stock,
             StockMinimo = articulo.StockMinimo
         };
 

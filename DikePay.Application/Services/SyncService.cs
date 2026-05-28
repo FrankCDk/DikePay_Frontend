@@ -1,6 +1,7 @@
 ﻿using DikePay.Application.DTOs.Articulos.Response;
 using DikePay.Application.DTOs.Promocion.Response;
 using DikePay.Application.Interfaces;
+using DikePay.Application.Interfaces.Api;
 using DikePay.Application.Interfaces.Repositories;
 using DikePay.Application.Interfaces.Services;
 using DikePay.Domain.Entities;
@@ -69,20 +70,23 @@ namespace DikePay.Application.Services
                 _appState.NotifyStateChanged();
 
                 // 1. Descarga paralela (Opcional para velocidad)
-                var articulosDto = await _apiArticulos.GetArticulosFromApiAsync();
+                var articulosDto = await _apiArticulos.GetAllAsync();
                 var promocionesDto = await _apiPromociones.GetPromocionFromApiAsync();
 
                 int conteoArticulos = 0;
                 int conteoPromos = 0;
 
                 // 2. Procesar Artículos
-                if (articulosDto != null && articulosDto.Any())
+                if (articulosDto.Success) // Si la respuesta fue exitosa, procesamos los datos
                 {
-                    var entidades = articulosDto.Select(MapToEntity).ToList();
-                    await _repo.SaveAllAsync(entidades);
-                    conteoArticulos = entidades.Count;
+                    if (articulosDto.Data != null && articulosDto.Data.Any())
+                    {
+                        var entidades = articulosDto.Data.Select(MapToEntity).ToList();
+                        await _repo.SaveAllAsync(entidades);
+                        conteoArticulos = entidades.Count;
+                    }
                 }
-
+               
                 // 3. Procesar Promociones
                 if (promocionesDto != null && promocionesDto.Any())
                 {
@@ -118,7 +122,27 @@ namespace DikePay.Application.Services
             Codigo = dto.Codigo,
             Nombre = dto.Nombre,
             Precio = dto.Precio,
-            CodigoSku = dto.Sku
+            CodigoSku = dto.Sku,
+            StockMinimo = dto.StockMinimo,
+            CodigoProductoSunat = dto.CodigoImpuestoSunat,
+            Unidad = dto.UnidadMedida,
+            TipoArticulo = dto.TipoProducto,
+            TipoExistenciaSunat = dto.TipoInventarioSunat,
+            AceptaDecimales = dto.PermiteDecimales,
+            TieneSerie = dto.TieneNumeroSerie,
+            TieneLote = dto.TieneNumeroLote,
+            ControlaStock = dto.ControlaStock,
+            EsPrecioLibre = dto.EsPrecioAbierto,
+            MonedaId = dto.Moneda,
+            PorcentajeDescuento = dto.PorcentajeDescuento,
+            TipoAfectacion = dto.TipoAfectacionImpuesto,
+            Estado = dto.Estado,
+            FechaCreacion = dto.FechaCreacion,
+            UsuarioCreacion = dto.UsuarioCreacion,
+            FechaActulizacion = dto.FechaActualizacion,
+            UsuarioActulizacion = dto.UsuarioActualizacion,
+            UltimaActualizacion = DateTime.Now,
+            EstadoSincronizacion = "S"
         };
 
         private Promocion MapToEntityPromocion(PromocionDto dto) => new Promocion

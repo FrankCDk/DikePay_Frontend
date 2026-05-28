@@ -31,7 +31,7 @@ namespace DikePay.Infrastructure.Persistence
 
                     // CREAMOS LAS OPCIONES DE CONEXIÓN
                     var options = new SQLiteConnectionString(dbPath,
-                        storeDateTimeAsTicks: false, // <--- AQUÍ ESTÁ EL TRUCO
+                        storeDateTimeAsTicks: false,
                         openFlags: SQLiteOpenFlags.ReadWrite |
                            SQLiteOpenFlags.Create |
                            SQLiteOpenFlags.FullMutex
@@ -52,7 +52,7 @@ namespace DikePay.Infrastructure.Persistence
 
                     // --- AQUÍ VA TU LÓGICA DE TABLAS ---
                     // En Desarrollo puedes dejar el Drop, en producción COMENTALO.
-                    //await _connection.DropTableAsync<Articulo>();
+                    await _connection.DropTableAsync<Articulo>();
                     //await _connection.DropTableAsync<Documento>();
                     //await _connection.DropTableAsync<Promocion>();
 

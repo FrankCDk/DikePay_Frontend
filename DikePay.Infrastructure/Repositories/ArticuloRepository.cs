@@ -61,10 +61,10 @@ namespace DikePay.Infrastructure.Repositories
         /// </summary>
         /// <param name="articulo"></param>
         /// <returns></returns>
-        public async Task<int> SaveAsync(Articulo articulo)
+        public async Task SaveAsync(Articulo articulo)
         {
             var db = await _context.GetConnectionAsync();
-            return await db.InsertAsync(articulo);
+            await db.InsertAsync(articulo);
         }
 
         public async Task<int> UpdateAsync(Articulo articulo)

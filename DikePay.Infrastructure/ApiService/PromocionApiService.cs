@@ -16,7 +16,7 @@ namespace DikePay.Infrastructure.ApiService
 
         public async Task<List<PromocionDto>> GetPromocionFromApiAsync()
         {
-            return await _httpClient.GetFromJsonAsync<List<PromocionDto>>("promotions/all")
+            return await _httpClient.GetFromJsonAsync<List<PromocionDto>>("promociones")
                    ?? new();
         }
     }

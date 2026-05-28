@@ -13,10 +13,10 @@ namespace DikePay.Domain.Entities
 
         [Indexed(Name = "Idx_Articulo_Sku")] // Indexamos el SKU para que la búsqueda por código de barras sea instantánea
         public string CodigoSku { get; set; } = string.Empty;
+        public string Version { get; set; } = string.Empty;
 
         public string Nombre { get; set; } = string.Empty;
         public decimal Precio { get; set; }
-        public decimal Stock { get; set; }
         public decimal StockMinimo { get; set; }
 
         // --- Campos SUNAT y Operativos ---
@@ -33,10 +33,18 @@ namespace DikePay.Domain.Entities
         public bool EsPrecioLibre { get; set; }   // Flag precio libre
 
         // --- Finanzas ---
-        public string MonedaId { get; set; } = "PEN"; // PEN o USD
+        public string MonedaId { get; set; } = string.Empty; // PEN o USD
         public decimal PorcentajeDescuento { get; set; }
-        public string TipoAfectacion { get; set; } = "GR"; // GR, INA, EXO
-        public string Estado { get; set; } = "V"; // Activo/Inactivo
+        public string TipoAfectacion { get; set; } = string.Empty; // GR, INA, EXO
+        public string Estado { get; set; } = string.Empty; // Activo/Inactivo
+
+
+        public DateTime FechaCreacion {  get; set; }
+        public string UsuarioCreacion { get; set; } = string.Empty;
+        public DateTime FechaActulizacion {  get; set; }
+        public string UsuarioActulizacion {  get; set; } = string.Empty;
+
         public DateTime UltimaActualizacion { get; set; } = DateTime.Now;
+        public string EstadoSincronizacion { get; set; } = "P"; // P=Pendiente, S=Sincronizado, E=Error
     }
 }

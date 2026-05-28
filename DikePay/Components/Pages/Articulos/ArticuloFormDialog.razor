@@ -64,18 +64,7 @@
                                      Adornment="Adornment.Start"
                                      AdornmentIcon="@Icons.Material.Filled.AttachMoney" />
                 </MudItem>
-
-                <MudItem xs="12" sm="4">
-                    <MudNumericField T="decimal"
-                                     Label="Stock Inicial"
-                                     Variant="Variant.Outlined"
-                                     @bind-Value="Articulo.Stock"
-                                     For="@(() => Articulo.Stock)"
-                                     Format="N4"
-                                     Culture="@_enUs"
-                                     HelperText="Cantidad actual" />
-                </MudItem>
-
+               
                 <MudItem xs="12" sm="4">
                     <MudNumericField T="decimal"
                                      Label="Stock Mínimo"
@@ -86,6 +75,27 @@
                                      Culture="@_enUs"
                                      HelperText="Alerta de reposición" />
                 </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Moneda" @bind-Value="Articulo.MonedaId" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("PEN")">Soles (PEN)</MudSelectItem>
+                        <MudSelectItem Value="@("USD")">Dólares (USD)</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string" Label="Tipo Afectación" @bind-Value="Articulo.TipoAfectacion" Variant="Variant.Outlined">
+                        <MudSelectItem Value="@("GR")">Gravado (GR)</MudSelectItem>
+                        <MudSelectItem Value="@("EXO")">Exonerado (EXO)</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudCheckBox @bind-Value="Articulo.ControlaStock" Label="Controlar Stock" Color="Color.Primary" />
+                </MudItem>
+
+
+
             </MudGrid>
         </MudForm>
     </DialogContent>
